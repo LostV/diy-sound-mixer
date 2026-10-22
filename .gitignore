@@ -1,0 +1,18 @@
+# Rust
+target/
+
+# Node / frontend
+node_modules/
+dist/
+
+# Tauri
+pc-app/app/src-tauri/gen/schemas/
+
+# PlatformIO (firmware)
+.pio/
+
+# Editor / OS
+.vs/
+*.log
+Thumbs.db
+.DS_Store
