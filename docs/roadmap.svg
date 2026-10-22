@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 170" width="960" height="170" role="img" aria-label="Roadmap: setup, audio engine, tray and simulator, screen UI, output routing, and icon and installer are done. Now: hardware, waiting for parts. Next: firmware and USB link, the inevitable struggle to make it work, about ten enclosure prototypes, then polish.">
+  <!-- Nodes sit 84 apart from x=60. When a milestone is done: give it a check,
+       move the "now" node, the pill and the gold track end (x2 and the gradient's x2). -->
+  <style>
+    /* Own dark card instead of prefers-color-scheme: in an img tag that
+       follows the OS theme, not GitHub's, so it can't match the page. */
+    .label { font: 600 13px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #EDE6DC; }
+    .sub { font: italic 11px system-ui, -apple-system, "Segoe UI", sans-serif; fill: #9A9086; }
+    .todo-label { fill: #9A9086; font-weight: 500; }
+    .now-label { fill: #F2C474; }
+    .rail { stroke: #3F3932; }
+    .todo { stroke: #5B554F; fill: #15120F; }
+    .hole { fill: #15120F; }
+    .pill-text { font: 700 10px system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing: .08em; fill: #1B1712; }
+  </style>
+  <defs>
+    <linearGradient id="gold" gradientUnits="userSpaceOnUse" x1="60" x2="564" y1="0" y2="0">
+      <stop offset="0" stop-color="#B07A2E"/>
+      <stop offset="1" stop-color="#F2C474"/>
+    </linearGradient>
+    <linearGradient id="knob" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7C25A"/>
+      <stop offset="1" stop-color="#D99428"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="0.5" y="0.5" width="959" height="169" rx="16" fill="#15120F" stroke="#2C2722"/>
+
+  <!-- rail and progress -->
+  <line class="rail" x1="60" y1="78" x2="900" y2="78" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 8"/>
+  <line x1="60" y1="78" x2="564" y2="78" stroke="url(#gold)" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- done -->
+  <g fill="url(#knob)">
+    <circle cx="60" cy="78" r="12"/>
+    <circle cx="144" cy="78" r="12"/>
+    <circle cx="228" cy="78" r="12"/>
+    <circle cx="312" cy="78" r="12"/>
+    <circle cx="396" cy="78" r="12"/>
+    <circle cx="480" cy="78" r="12"/>
+  </g>
+  <g fill="none" stroke="#1B1712" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M54.5 78 l3.5 3.5 l7.5 -7.5"/>
+    <path d="M138.5 78 l3.5 3.5 l7.5 -7.5"/>
+    <path d="M222.5 78 l3.5 3.5 l7.5 -7.5"/>
+    <path d="M306.5 78 l3.5 3.5 l7.5 -7.5"/>
+    <path d="M390.5 78 l3.5 3.5 l7.5 -7.5"/>
+    <path d="M474.5 78 l3.5 3.5 l7.5 -7.5"/>
+  </g>
+
+  <!-- now -->
+  <circle cx="564" cy="78" r="12" fill="none" stroke="#F2C474" stroke-width="2">
+    <animate attributeName="r" values="12;24" dur="2s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.7;0" dur="2s" repeatCount="indefinite"/>
+  </circle>
+  <circle class="hole" cx="564" cy="78" r="12" stroke="#E3A845" stroke-width="3"/>
+  <circle cx="564" cy="78" r="5.5" fill="url(#knob)"/>
+  <rect x="514" y="30" width="100" height="22" rx="11" fill="url(#knob)"/>
+  <text class="pill-text" x="564" y="45" text-anchor="middle">WE ARE HERE</text>
+
+  <!-- todo -->
+  <g class="todo" stroke-width="2.5">
+    <circle cx="648" cy="78" r="10"/>
+    <circle cx="732" cy="78" r="10"/>
+    <circle cx="816" cy="78" r="10"/>
+    <circle cx="900" cy="78" r="10"/>
+  </g>
+
+  <!-- labels -->
+  <g text-anchor="middle">
+    <text class="label" x="60" y="116">Setup</text>
+    <text class="label" x="144" y="116">Audio</text>
+    <text class="label" x="144" y="133">engine</text>
+    <text class="label" x="228" y="116">Tray +</text>
+    <text class="label" x="228" y="133">simulator</text>
+    <text class="label" x="312" y="116">Screen UI</text>
+    <text class="label" x="396" y="116">Output</text>
+    <text class="label" x="396" y="133">routing</text>
+    <text class="label" x="480" y="116">Icon +</text>
+    <text class="label" x="480" y="133">installer</text>
+    <text class="label now-label" x="564" y="116">Hardware</text>
+    <text class="sub" x="564" y="133">waiting for parts</text>
+    <text class="label todo-label" x="648" y="116">Firmware +</text>
+    <text class="label todo-label" x="648" y="133">USB link</text>
+    <text class="label todo-label" x="732" y="116">The struggle</text>
+    <text class="sub" x="732" y="133">making it</text>
+    <text class="sub" x="732" y="148">actually work</text>
+    <text class="label todo-label" x="816" y="116">Enclosure</text>
+    <text class="label todo-label" x="816" y="133">prototypes</text>
+    <text class="sub" x="816" y="148">all ~10 of them</text>
+    <text class="label todo-label" x="900" y="116">Polish</text>
+    <text class="sub" x="900" y="133">profiles, OSD</text>
+  </g>
+</svg>
