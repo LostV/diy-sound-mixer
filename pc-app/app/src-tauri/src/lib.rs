@@ -1,3 +1,4 @@
+mod links;
 mod tray;
 
 use std::sync::{Arc, Mutex};
@@ -41,11 +42,16 @@ fn make_backend() -> Box<dyn AudioBackend> {
 }
 
 /// Runs on the mixer thread ~30 times a second.
-fn publish(app: &AppHandle, devices: &Devices, snapshot: MixerSnapshot) {
+fn publish(app: &AppHandle, devices: &Devices, links: &links::Links, snapshot: MixerSnapshot) {
     let outgoing = devices.0.lock().expect("devices lock").update(&snapshot);
     for (link, messages) in outgoing {
-        if link == SIM_LINK && !messages.is_empty() {
+        if messages.is_empty() {
+            continue;
+        }
+        if link == SIM_LINK {
             send_to_sim(app, &messages);
+        } else {
+            links.send(&link, &messages);
         }
     }
     let _ = app.emit_to("main", "mixer-snapshot", snapshot);
@@ -232,12 +238,15 @@ pub fn run() {
             });
 
             let devices = Devices::default();
+            let links = links::Links::default();
             app.manage(devices.clone());
             let handle = app.handle().clone();
+            let publish_links = links.clone();
             let host = MixerHost::spawn(make_backend, config, Some(config_path), move |snapshot| {
-                publish(&handle, &devices, snapshot);
+                publish(&handle, &devices, &publish_links, snapshot);
             });
             app.manage(Host(Mutex::new(Some(host))));
+            links::listen(app.handle().clone(), links);
 
             tray::build(app.handle())?;
             if !std::env::args().any(|a| a == MINIMIZED_ARG) {

@@ -8,8 +8,9 @@ dist/
 # Tauri
 pc-app/app/src-tauri/gen/schemas/
 
-# PlatformIO (firmware)
+# PlatformIO (firmware) and the CMake simulator build
 .pio/
+build-sim/
 
 # Editor / OS
 .vs/
