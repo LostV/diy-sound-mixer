@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/mixer-core", "crates/mixer-wasapi", "app/src-tauri"]
+members = ["crates/mixer-core", "crates/mixer-wasapi", "crates/mixer-devices", "app/src-tauri"]
 
 [workspace.package]
 version = "0.1.0"
@@ -10,6 +10,7 @@ license = "MIT"
 [workspace.dependencies]
 mixer-core = { path = "crates/mixer-core" }
 mixer-wasapi = { path = "crates/mixer-wasapi" }
+mixer-devices = { path = "crates/mixer-devices" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 log = "0.4"

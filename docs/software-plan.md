@@ -77,6 +77,8 @@ Vi bygger routing i lag, der hvert lag er nyttig alene. **Lag 1 erstatter det me
 
 ## Protokoll (første versjon)
 
+> Den gjeldende spesifikasjonen ligger i [protocol/README.md](../protocol/README.md). Eksemplene under er det opprinnelige utkastet.
+
 Én JSON-melding per linje (`\n`), 115200 baud (USB CDC, så hastigheten er egentlig likegyldig).
 
 ```jsonc
@@ -154,4 +156,5 @@ Skannet på maskinen din (2026-10-22). Windows ser A50-en som:
 ## Fremdrift
 
 - [x] Fase 0: repo, Cargo workspace, Tauri-app
-- [x] Fase 1: lydmotor (lag 1). Kanaler, regler, volum og mute per kanal, mic med valg av enhet, nivåmålere og testvindu. Testet med enhetstester og en skanning av maskinen som bare leser. Selve appen er ikke kjørt ennå.
+- [x] Fase 1: lydmotor (lag 1). Kanaler, regler, volum og mute per kanal, mic med valg av enhet, nivåmålere og testvindu. Testet med enhetstester og en skanning av maskinen som bare leser.
+- [x] Fase 2: tray-ikon (åpne, simulator, autostart, avslutt), lukk = skjul til tray, én instans, autostart med `--minimized`, protokoll v1 ([protocol/README.md](../protocol/README.md)) og device hub (`mixer-devices`), simulatorvindu med skjerm, knotter, mute-knapper med LED og protokoll-logg. Simulatoren og hovedvinduet er testet i nettleser med simulert IPC. Hele appen er ikke kjørt ennå.

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulator – DIY Sound Mixer</title>
+    <link rel="stylesheet" href="/src/styles.css" />
+    <link rel="stylesheet" href="/src/simulator.css" />
+    <script type="module" src="/src/simulator.ts" defer></script>
+  </head>
+
+  <body class="sim">
+    <div class="device" aria-label="Simulert mikser">
+      <div class="bezel">
+        <div id="screen" class="screen" aria-label="Skjerm 800×480"></div>
+      </div>
+      <div id="controls" class="controls"></div>
+    </div>
+
+    <section class="log-panel">
+      <header>
+        <h2>Protokoll</h2>
+        <label><input id="log-meter" type="checkbox" /> Vis meter</label>
+        <button id="log-clear" type="button">Tøm</button>
+      </header>
+      <ol id="log" class="log" aria-live="off"></ol>
+      <p class="hint">
+        Vri: musehjul eller dra opp/ned. Trykk på knotten eller skjermen = mute. Piltaster virker når knotten har fokus.
+        Alt går gjennom den samme protokollen som den ekte hardwaren.
+      </p>
+    </section>
+  </body>
+</html>

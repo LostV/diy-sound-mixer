@@ -27,4 +27,13 @@ export default defineConfig(() => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  // Two windows: the mixer (index.html) and the hardware simulator.
+  build: {
+    rollupOptions: {
+      input: {
+        main: "index.html",
+        simulator: "simulator.html",
+      },
+    },
+  },
 }));

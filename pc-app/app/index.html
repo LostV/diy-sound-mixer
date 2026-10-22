@@ -11,10 +11,17 @@
   <body>
     <header>
       <h1>DIY Sound Mixer</h1>
-      <label class="mic-picker">
-        Mikrofon
-        <select id="mic-select"></select>
-      </label>
+      <div class="header-controls">
+        <label class="mic-picker">
+          Mikrofon
+          <select id="mic-select"></select>
+        </label>
+        <label class="toggle">
+          <input id="autostart" type="checkbox" />
+          Start med Windows
+        </label>
+        <button id="open-simulator" type="button">Simulator</button>
+      </div>
     </header>
 
     <section id="channels" class="channels" aria-label="Kanaler"></section>

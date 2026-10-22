@@ -28,6 +28,21 @@ micSelect.addEventListener("change", () => {
   invoke("set_capture_device", { name: micSelect.value || null });
 });
 
+const autostartBox = document.querySelector<HTMLInputElement>("#autostart")!;
+invoke<boolean>("get_autostart").then((on) => (autostartBox.checked = on));
+autostartBox.addEventListener("change", async () => {
+  try {
+    await invoke("set_autostart", { enabled: autostartBox.checked });
+  } catch (e) {
+    autostartBox.checked = !autostartBox.checked;
+    console.error("autostart", e);
+  }
+});
+
+document
+  .querySelector("#open-simulator")!
+  .addEventListener("click", () => invoke("show_simulator"));
+
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, className?: string, text?: string) {
   const node = document.createElement(tag);
   if (className) node.className = className;
@@ -71,7 +86,7 @@ function buildChannel(ch: ChannelSnapshot): ChannelView {
 
   root.append(title, value, body, steps, mute, apps);
 
-  const view: ChannelView = { root, value, slider, meter, mute, apps, lastUserInput: 0 };
+  const view: ChannelView = { root, value, slider, meter, mute, apps, lastUserInput: -Infinity };
   slider.addEventListener("input", () => {
     view.lastUserInput = performance.now();
     view.value.textContent = `${slider.value}%`;

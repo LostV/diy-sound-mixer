@@ -1,7 +1,20 @@
-use std::sync::Mutex;
+mod tray;
 
-use mixer_core::{Assignment, AudioBackend, Command, MixerConfig, MixerHost, NullBackend};
-use tauri::{Emitter, Manager, RunEvent, State};
+use std::sync::{Arc, Mutex};
+
+use mixer_core::{
+    Assignment, AudioBackend, Command, MixerConfig, MixerHost, MixerSnapshot, NullBackend,
+};
+use mixer_devices::{DeviceHub, HostMessage};
+use tauri::{
+    AppHandle, Emitter, Manager, RunEvent, State, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+};
+use tauri_plugin_autostart::ManagerExt;
+
+/// Passed by the autostart entry so the app starts in the tray.
+const MINIMIZED_ARG: &str = "--minimized";
+/// Link id of the in-app simulator in the device hub.
+const SIM_LINK: &str = "sim";
 
 /// Taken out and dropped on exit so the host saves the config and stops cleanly.
 struct Host(Mutex<Option<MixerHost>>);
@@ -14,6 +27,10 @@ impl Host {
     }
 }
 
+/// Shared between the mixer thread (snapshots out) and commands (device input in).
+#[derive(Clone, Default)]
+struct Devices(Arc<Mutex<DeviceHub>>);
+
 fn make_backend() -> Box<dyn AudioBackend> {
     #[cfg(windows)]
     match mixer_wasapi::WasapiBackend::new() {
@@ -21,6 +38,69 @@ fn make_backend() -> Box<dyn AudioBackend> {
         Err(e) => log::error!("starting Windows audio backend: {e}"),
     }
     Box::new(NullBackend)
+}
+
+/// Runs on the mixer thread ~30 times a second.
+fn publish(app: &AppHandle, devices: &Devices, snapshot: MixerSnapshot) {
+    let outgoing = devices.0.lock().expect("devices lock").update(&snapshot);
+    for (link, messages) in outgoing {
+        if link == SIM_LINK && !messages.is_empty() {
+            send_to_sim(app, &messages);
+        }
+    }
+    let _ = app.emit_to("main", "mixer-snapshot", snapshot);
+}
+
+fn send_to_sim(app: &AppHandle, messages: &[HostMessage]) {
+    let lines: Vec<String> = messages.iter().map(HostMessage::to_line).collect();
+    let _ = app.emit_to("simulator", "sim-host", lines);
+}
+
+pub(crate) fn show_main(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+    }
+}
+
+pub(crate) fn open_simulator(app: &AppHandle) {
+    if let Some(window) = app.get_webview_window("simulator") {
+        let _ = window.unminimize();
+        let _ = window.show();
+        let _ = window.set_focus();
+        return;
+    }
+    let built =
+        WebviewWindowBuilder::new(app, "simulator", WebviewUrl::App("simulator.html".into()))
+            .title("Simulator – DIY Sound Mixer")
+            .inner_size(960.0, 860.0)
+            .min_inner_size(720.0, 640.0)
+            .build();
+    match built {
+        Ok(_) => {
+            let hello = app
+                .state::<Devices>()
+                .0
+                .lock()
+                .expect("devices lock")
+                .connect(SIM_LINK);
+            send_to_sim(app, &hello);
+        }
+        Err(e) => log::error!("opening simulator: {e}"),
+    }
+}
+
+pub(crate) fn set_autostart_enabled(app: &AppHandle, enabled: bool) -> Result<(), String> {
+    let launcher = app.autolaunch();
+    let result = if enabled {
+        launcher.enable()
+    } else {
+        launcher.disable()
+    };
+    result.map_err(|e| e.to_string())?;
+    tray::sync_autostart(app, enabled);
+    Ok(())
 }
 
 #[tauri::command]
@@ -52,28 +132,92 @@ fn set_capture_device(host: State<Host>, name: Option<String>) {
     host.send(Command::SetCaptureDevice { name });
 }
 
+#[tauri::command]
+fn get_autostart(app: AppHandle) -> bool {
+    app.autolaunch().is_enabled().unwrap_or(false)
+}
+
+#[tauri::command]
+fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
+    set_autostart_enabled(&app, enabled)
+}
+
+#[tauri::command]
+fn show_simulator(app: AppHandle) {
+    open_simulator(&app);
+}
+
+/// One protocol line from the simulator, exactly as real hardware would send it.
+#[tauri::command]
+fn sim_send(host: State<Host>, devices: State<Devices>, line: String) {
+    let commands = devices
+        .0
+        .lock()
+        .expect("devices lock")
+        .handle_line(SIM_LINK, &line);
+    for command in commands {
+        host.send(command);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let app = tauri::Builder::default()
+        // Must be first: a second launch just brings up the running one.
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            show_main(app)
+        }))
+        .plugin(tauri_plugin_autostart::init(
+            tauri_plugin_autostart::MacosLauncher::LaunchAgent,
+            Some(vec![MINIMIZED_ARG]),
+        ))
         .setup(|app| {
             let config_path = app.path().app_config_dir()?.join("config.json");
             let config = MixerConfig::load(&config_path).unwrap_or_else(|e| {
                 log::error!("loading {}: {e}; using defaults", config_path.display());
                 MixerConfig::default()
             });
+
+            let devices = Devices::default();
+            app.manage(devices.clone());
             let handle = app.handle().clone();
             let host = MixerHost::spawn(make_backend, config, Some(config_path), move |snapshot| {
-                let _ = handle.emit("mixer-snapshot", snapshot);
+                publish(&handle, &devices, snapshot);
             });
             app.manage(Host(Mutex::new(Some(host))));
+
+            tray::build(app.handle())?;
+            if !std::env::args().any(|a| a == MINIMIZED_ARG) {
+                show_main(app.handle());
+            }
             Ok(())
+        })
+        .on_window_event(|window, event| match (window.label(), event) {
+            // Closing the mixer window keeps the app running in the tray.
+            ("main", WindowEvent::CloseRequested { api, .. }) => {
+                api.prevent_close();
+                let _ = window.hide();
+            }
+            ("simulator", WindowEvent::Destroyed) => {
+                window
+                    .state::<Devices>()
+                    .0
+                    .lock()
+                    .expect("devices lock")
+                    .disconnect(SIM_LINK);
+            }
+            _ => {}
         })
         .invoke_handler(tauri::generate_handler![
             set_volume,
             adjust_volume,
             toggle_mute,
             assign_app,
-            set_capture_device
+            set_capture_device,
+            get_autostart,
+            set_autostart,
+            show_simulator,
+            sim_send
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

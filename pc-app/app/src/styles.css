@@ -65,7 +65,16 @@ button:hover {
   background: #383b41;
 }
 
-.mic-picker {
+.header-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+.mic-picker,
+.toggle {
   display: flex;
   align-items: center;
   gap: 8px;

@@ -12,6 +12,8 @@
   "app": {
     "windows": [
       {
+        "label": "main",
+        "visible": false,
         "title": "DIY Sound Mixer",
         "width": 1040,
         "height": 760,

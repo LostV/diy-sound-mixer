@@ -6,8 +6,16 @@ Rust + Tauri 2. See [docs/software-plan.md](../docs/software-plan.md) for the ar
 |---|---|
 | `crates/mixer-core` | Channels, app rules, mixer logic, config, host thread. Pure Rust, tested without audio. |
 | `crates/mixer-wasapi` | Windows Core Audio backend (`windows` crate). |
-| `app/src-tauri` | The Tauri app: commands, events, startup. |
-| `app/src` | The settings/test window (vanilla TypeScript). |
+| `crates/mixer-devices` | Device protocol and hub: knobs, buttons and touch become commands; mixer state becomes screen/LED messages. See [protocol/README.md](../protocol/README.md). |
+| `app/src-tauri` | The Tauri app: commands, events, tray, autostart, simulator link. |
+| `app/src` | Mixer window (`main.ts`) and hardware simulator (`simulator.ts`), vanilla TypeScript. |
+
+## Usage
+
+- **Tray:** the icon has a menu with Open mixer, Simulator, Start with Windows and Quit. A left click opens the mixer.
+- **Closing the window** only hides it; the app keeps running in the tray. Quit from the tray menu.
+- **Start with Windows** launches the app hidden in the tray (`--minimized`). Note: in `tauri dev`, the debug build's path is registered, so turn it off again after testing. Turn it on for real in the installed version.
+- **Simulator** (button in the window, or the tray menu): a virtual device with the screen, 4 knobs and mute buttons. It speaks the same protocol as the hardware, and the log at the bottom shows every message. Turn a knob with the mouse wheel or by dragging up/down; click a knob or the screen to mute.
 
 ## Requirements
 
