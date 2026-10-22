@@ -29,7 +29,7 @@ use windows::{
     core::{Interface, PWSTR, Result},
 };
 
-pub use crate::icon::icon_png;
+pub use crate::icon::{icon_png, icon_rgba};
 use crate::{loopback::ProcessMeter, policy::PolicyConfig, process::ProcessCache};
 
 struct Session {

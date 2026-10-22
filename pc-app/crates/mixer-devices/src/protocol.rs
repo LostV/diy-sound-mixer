@@ -25,6 +25,34 @@ impl DeviceKind {
     pub fn has_leds(self) -> bool {
         matches!(self, Self::Knobs | Self::Sim)
     }
+
+    /// Gets the app list, icons and devices for routing from the screen.
+    pub fn has_app_page(self) -> bool {
+        matches!(self, Self::Panel)
+    }
+}
+
+/// Where `assign` moves an app: a channel slot, `"none"` (leave it alone)
+/// or `"auto"` (let the rules decide again).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum AssignTarget {
+    Slot(u8),
+    Keyword(String),
+}
+
+/// One app on the screen's app page.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AppItem {
+    /// The process name; what `assign` sends back.
+    pub id: String,
+    pub name: String,
+    /// Channel slot the app is in, or -1 when it is not controlled.
+    pub ch: i8,
+    /// Placed by the rules rather than by the user.
+    pub auto: bool,
+    /// An `icon` message with this id has been sent.
+    pub icon: bool,
 }
 
 /// Device → PC.
@@ -45,6 +73,11 @@ pub enum DeviceMessage {
     Btn { id: String, s: u8 },
     /// Touch on the screen. `action` is `mute` for now.
     Touch { action: String, ch: u8 },
+    /// The user moved an app on the screen's app page.
+    Assign { app: String, to: AssignTarget },
+    /// The user picked a device for slot `ch`: the output of a playback
+    /// channel or the microphone of the mic channel. `""` = Windows default.
+    Device { ch: u8, name: String },
 }
 
 fn default_proto() -> u32 {
@@ -73,6 +106,9 @@ pub enum HostMessage {
         sub: String,
         /// False when the channel has nothing to control (no mic).
         avail: bool,
+        /// The microphone channel: it takes no apps.
+        #[serde(default)]
+        cap: bool,
     },
     /// Meter levels per channel slot, 0..=100, already on a dB scale so the
     /// device can draw them directly.
@@ -80,6 +116,28 @@ pub enum HostMessage {
     /// UI language for the device's own texts (`en` or `no`). Sent before
     /// the channels and again when it changes. Devices default to English.
     Lang { v: Language },
+    /// The apps that play sound, for the screen's app page. Sent when it changes.
+    Apps { list: Vec<AppItem> },
+    /// An app icon, sent once per app before the `apps` that uses it.
+    /// `px` is base64 of LVGL's RGB565A8: `w*h` little-endian RGB565 pixels,
+    /// then `w*h` alpha bytes.
+    Icon {
+        id: String,
+        w: u16,
+        h: u16,
+        px: String,
+    },
+    /// Device choices for the pickers on the app page. `sel[i]` is slot i's
+    /// choice (`""` = Windows default): an output for playback channels, a
+    /// microphone for the mic channel. `routing` is false when Windows refuses
+    /// per-app outputs; the output pickers are then hidden.
+    Devices {
+        out: Vec<String>,
+        #[serde(rename = "in")]
+        inputs: Vec<String>,
+        sel: Vec<String>,
+        routing: bool,
+    },
 }
 
 impl DeviceMessage {
@@ -118,6 +176,46 @@ mod tests {
                 id: "enc0".into(),
                 s: 1
             }
+        );
+    }
+
+    #[test]
+    fn parses_assign_targets() {
+        assert_eq!(
+            DeviceMessage::parse(r#"{"t":"assign","app":"Discord.exe","to":2}"#).unwrap(),
+            DeviceMessage::Assign {
+                app: "Discord.exe".into(),
+                to: AssignTarget::Slot(2)
+            }
+        );
+        assert_eq!(
+            DeviceMessage::parse(r#"{"t":"assign","app":"x.exe","to":"none"}"#).unwrap(),
+            DeviceMessage::Assign {
+                app: "x.exe".into(),
+                to: AssignTarget::Keyword("none".into())
+            }
+        );
+        assert_eq!(
+            DeviceMessage::parse(r#"{"t":"device","ch":1,"name":""}"#).unwrap(),
+            DeviceMessage::Device {
+                ch: 1,
+                name: String::new()
+            }
+        );
+    }
+
+    #[test]
+    fn devices_message_uses_in_as_key() {
+        let line = HostMessage::Devices {
+            out: vec!["A".into()],
+            inputs: vec!["M".into()],
+            sel: vec![String::new()],
+            routing: true,
+        }
+        .to_line();
+        assert_eq!(
+            line,
+            r#"{"t":"devices","out":["A"],"in":["M"],"sel":[""],"routing":true}"#
         );
     }
 

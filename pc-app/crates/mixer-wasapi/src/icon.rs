@@ -1,4 +1,4 @@
-//! App icons for the UI: an executable's main icon as PNG bytes.
+//! App icons for the UI: an executable's main icon as PNG bytes or RGBA.
 
 use std::ffi::c_void;
 
@@ -19,21 +19,27 @@ use windows::{
 /// The first icon in `exe_path`, rendered at `size`×`size`, encoded as PNG.
 /// `None` if the file has no icon.
 pub fn icon_png(exe_path: &str, size: u32) -> Option<Vec<u8>> {
+    let (width, height, pixels) = icon_rgba(exe_path, size)?;
+    encode_png(width, height, &pixels)
+}
+
+/// The first icon in `exe_path` at `size`×`size` as straight RGBA:
+/// `(width, height, pixels)`. `None` if the file has no icon.
+pub fn icon_rgba(exe_path: &str, size: u32) -> Option<(u32, u32, Vec<u8>)> {
     let mut icon = HICON::default();
     // LOWORD = large icon size, HIWORD = small icon size (unused).
     let sizes = size | (16 << 16);
     unsafe { SHDefExtractIconW(&HSTRING::from(exe_path), 0, 0, Some(&mut icon), None, sizes) }
         .ok()
         .ok()?;
-    let rgba = icon_rgba(icon);
+    let rgba = hicon_rgba(icon);
     unsafe {
         let _ = DestroyIcon(icon);
     }
-    let (width, height, pixels) = rgba?;
-    encode_png(width, height, &pixels)
+    rgba
 }
 
-fn icon_rgba(icon: HICON) -> Option<(u32, u32, Vec<u8>)> {
+fn hicon_rgba(icon: HICON) -> Option<(u32, u32, Vec<u8>)> {
     let mut info = ICONINFO::default();
     unsafe { GetIconInfo(icon, &mut info) }.ok()?;
     let dc = unsafe { CreateCompatibleDC(None) };

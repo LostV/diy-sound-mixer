@@ -2,12 +2,19 @@
 // window, connected to the PC app over local TCP instead of USB serial.
 //
 //   panel_sim [host] [port]     (default 127.0.0.1 47800)
+//
+// Test hook: set PANEL_SIM_INPUT to a file path, and lines appended to that
+// file drive a virtual finger: `down X Y`, `move X Y`, `up`. Real mouse input
+// keeps working; this exists because posted window messages can't hold a
+// press (SDL checks the real button state).
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
+#include <sstream>
 #include <string>
 
 #include "lvgl.h"
@@ -124,11 +131,47 @@ private:
 Link* link = nullptr;
 panel::Model model;
 
-void on_touch_mute(int slot) {
-    if (link) link->send_line(panel::touch_mute_line(slot));
+void send_to_pc(const std::string& line) {
+    if (link) link->send_line(line);
 }
 
 uint32_t ticks() { return SDL_GetTicks(); }
+
+/// The virtual finger fed by PANEL_SIM_INPUT.
+struct ScriptedPointer {
+    std::string path;
+    std::streamoff read = 0;
+    bool pressed = false;
+    lv_point_t point{};
+
+    void poll() {
+        std::ifstream file(path);
+        if (!file) return;
+        file.seekg(read);
+        std::string line;
+        while (std::getline(file, line)) {
+            if (file.eof()) break;  // a half-written last line waits for the next poll
+            read = file.tellg();
+            std::istringstream words(line);
+            std::string verb;
+            words >> verb;
+            if (verb == "down" || verb == "move") {
+                words >> point.x >> point.y;
+                if (verb == "down") pressed = true;
+            } else if (verb == "up") {
+                pressed = false;
+            }
+        }
+    }
+};
+
+ScriptedPointer scripted;
+
+void read_scripted(lv_indev_t*, lv_indev_data_t* data) {
+    scripted.poll();
+    data->point = scripted.point;
+    data->state = scripted.pressed ? LV_INDEV_STATE_PRESSED : LV_INDEV_STATE_RELEASED;
+}
 
 }  // namespace
 
@@ -145,8 +188,14 @@ int main(int argc, char** argv) {
     lv_display_t* display = lv_sdl_window_create(800, 480);
     lv_sdl_window_set_title(display, "Screen simulator - DIY Sound Mixer");
     lv_sdl_mouse_create();
+    if (const char* input = std::getenv("PANEL_SIM_INPUT")) {
+        scripted.path = input;
+        lv_indev_t* finger = lv_indev_create();
+        lv_indev_set_type(finger, LV_INDEV_TYPE_POINTER);
+        lv_indev_set_read_cb(finger, read_scripted);
+    }
 
-    ui::init(on_touch_mute);
+    ui::init(send_to_pc);
 
     Link tcp(host, port);
     link = &tcp;
@@ -163,10 +212,11 @@ int main(int argc, char** argv) {
             if (was_connected) {
                 // Introduce ourselves right away; the PC also asks with hello?.
                 tcp.send_line(panel::hello_line());
+                ui::set_connected(true);
             } else {
+                ui::set_connected(false);  // first: it drops what points into the model
                 model = panel::Model{};
             }
-            ui::set_connected(was_connected);
         }
         uint32_t wait = lv_timer_handler();
         SDL_Delay(wait < 5 ? wait : 5);

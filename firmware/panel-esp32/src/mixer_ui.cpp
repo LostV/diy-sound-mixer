@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstring>
+#include <map>
+#include <vector>
 
 #include "lvgl.h"
 
@@ -20,16 +23,21 @@ namespace {
 
 constexpr int kWidth = 800;
 constexpr int kHeight = 480;
+constexpr int kMargin = 18;
 constexpr int kCardW = 182;
 constexpr int kCardH = 384;
 constexpr int kCardGap = 12;
 constexpr int kCardX = (kWidth - 4 * kCardW - 3 * kCardGap) / 2;
 constexpr int kCardY = 62;
 constexpr int kArcSize = 166;
+constexpr int kChipH = 40;
 
 const lv_color_t kText = lv_color_hex(0xF4F5F8);
 const lv_color_t kDanger = lv_color_hex(0xF43F5E);
 const lv_color_t kMutedArc = lv_color_hex(0x9CA3AF);
+const lv_color_t kNeutral = lv_color_hex(0x94A3B8);
+const lv_color_t kListBg = lv_color_hex(0x1D2130);
+const lv_color_t kWarn = lv_color_hex(0xFCD34D);
 
 struct ChannelView {
     lv_obj_t* card;
@@ -41,15 +49,28 @@ struct ChannelView {
     lv_obj_t* mute;
     lv_obj_t* mute_label;
     lv_obj_t* sub;
+    lv_obj_t* mic_picker;  // the mic card shows a microphone picker instead of `sub`
 };
 
-ChannelView views[panel::kSlots];
-lv_obj_t* status_dot;
-lv_obj_t* status_label;
-lv_obj_t* waiting;
-bool is_connected = false;
+/// A column on the app page: a playback channel, or "not controlled".
+struct Column {
+    lv_obj_t* obj;
+    lv_obj_t* list;
+    int slot;  // channel slot, or panel::kUncontrolled
+    lv_color_t accent;
+};
 
-/// The screen's own texts; channel names and subtitles come from the PC.
+/// An app chip being dragged.
+struct Drag {
+    bool active = false;
+    lv_obj_t* chip = nullptr;
+    lv_obj_t* ghost = nullptr;
+    lv_obj_t* list = nullptr;
+    size_t app = 0;  // index into `chip_apps`
+    lv_point_t offset{};
+};
+
+/// The screen's own texts; channel names and app names come from the PC.
 struct Texts {
     const char* mute;
     const char* muted;
@@ -57,14 +78,53 @@ struct Texts {
     const char* connected;
     const char* disconnected;
     const char* waiting;
+    const char* tab_mixer;
+    const char* tab_apps;
+    const char* not_controlled;
+    const char* windows_default;
+    const char* default_short;  // the same, shown in a closed picker
+    const char* automatic;
+    const char* not_connected;
+    const char* drop_here;
+    const char* move_to;
 };
 
-constexpr Texts kEnglish{"Mute", "Muted", "No device", "Connected", "Disconnected",
-                         "Waiting for the PC app \xE2\x80\xA6"};
-constexpr Texts kNorwegian{"Mute", "Mutet", "Ingen enhet", "Tilkoblet", "Frakoblet",
-                           "Venter p\xC3\xA5 PC-appen \xE2\x80\xA6"};
+constexpr Texts kEnglish{"Mute",          "Muted",           "No device",
+                         "Connected",     "Disconnected",    "Waiting for the PC app \xE2\x80\xA6",
+                         "Mixer",         "Apps",            "Not controlled",
+                         "Windows default", "Default",       "Automatic (rules)", "not connected",
+                         "Drag apps here", "Move to"};
+constexpr Texts kNorwegian{"Mute",           "Mutet",            "Ingen enhet",
+                           "Tilkoblet",      "Frakoblet",        "Venter p\xC3\xA5 PC-appen \xE2\x80\xA6",
+                           "Mikser",         "Apper",            "Ikke styrt",
+                           "Windows-standard", "Standard",     "Automatisk (regler)", "ikke tilkoblet",
+                           "Dra apper hit",  "Flytt til"};
+
+ChannelView views[panel::kSlots];
+lv_obj_t* status_dot;
+lv_obj_t* status_label;
+lv_obj_t* waiting;
+lv_obj_t* tabs;
+lv_obj_t* tab_buttons[2];
+lv_obj_t* tab_labels[2];
+lv_obj_t* page_mixer;
+lv_obj_t* page_apps;
+lv_obj_t* menu = nullptr;
+bool is_connected = false;
+bool apps_page_dirty = false;
+int current_tab = 0;
+std::string structure_key;
 const Texts* texts = &kEnglish;
-TouchMuteFn touch_mute = nullptr;
+const panel::Model* model = nullptr;
+SendFn send = nullptr;
+
+std::vector<Column> columns;
+std::vector<panel::App> chip_apps;  // the apps shown, as of the last rebuild
+std::map<std::string, lv_image_dsc_t> icon_images;
+std::map<int, std::vector<std::string>> picker_values;  // slot -> option names ("" = default)
+std::map<int, std::string> picker_options;  // slot -> option list text
+std::map<int, std::string> picker_texts;    // slot -> shown text; LVGL keeps only a pointer
+Drag drag;
 
 lv_obj_t* plain(lv_obj_t* parent) {
     lv_obj_t* obj = lv_obj_create(parent);
@@ -81,6 +141,44 @@ lv_obj_t* label(lv_obj_t* parent, const lv_font_t* font, lv_color_t color, lv_op
     return l;
 }
 
+/// Flat translucent glass with a faint rim (gradients band in 16-bit colour).
+void glass(lv_obj_t* obj, int radius, lv_opa_t fill = 24) {
+    lv_obj_set_style_radius(obj, radius, 0);
+    lv_obj_set_style_bg_color(obj, lv_color_white(), 0);
+    lv_obj_set_style_bg_opa(obj, fill, 0);
+    lv_obj_set_style_border_color(obj, lv_color_white(), 0);
+    lv_obj_set_style_border_opa(obj, 38, 0);
+    lv_obj_set_style_border_width(obj, 1, 0);
+}
+
+/// The brighter top-left edge that mimics the desktop app's edge lighting.
+void edge_light(lv_obj_t* parent, int w, int h, int radius) {
+    lv_obj_t* edge = plain(parent);
+    lv_obj_set_size(edge, w, h);
+    lv_obj_set_style_radius(edge, radius, 0);
+    lv_obj_set_style_border_color(edge, lv_color_white(), 0);
+    lv_obj_set_style_border_opa(edge, 110, 0);
+    lv_obj_set_style_border_width(edge, 1, 0);
+    lv_obj_set_style_border_side(edge, static_cast<lv_border_side_t>(LV_BORDER_SIDE_TOP | LV_BORDER_SIDE_LEFT), 0);
+    lv_obj_remove_flag(edge, LV_OBJ_FLAG_CLICKABLE);
+}
+
+lv_obj_t* dot(lv_obj_t* parent, lv_color_t color) {
+    lv_obj_t* d = plain(parent);
+    lv_obj_set_size(d, 10, 10);
+    lv_obj_set_style_radius(d, LV_RADIUS_CIRCLE, 0);
+    lv_obj_set_style_bg_opa(d, LV_OPA_COVER, 0);
+    lv_obj_set_style_bg_color(d, color, 0);
+    lv_obj_set_style_shadow_color(d, color, 0);
+    lv_obj_set_style_shadow_width(d, 12, 0);
+    lv_obj_set_style_shadow_opa(d, LV_OPA_80, 0);
+    return d;
+}
+
+void send_line(const std::string& line) {
+    if (send) send(line);
+}
+
 struct Glow {
     float x, y, radius;
     float r, g, b;  // 0..255
@@ -90,7 +188,7 @@ struct Glow {
 /// The aurora, computed once into an RGB565 image: soft radial glows over a
 /// dark base, with ordered dithering so 16-bit colour shows no banding.
 /// (LVGL shadows used as glows band visibly and are slow to redraw.)
-void build_background(lv_obj_t* screen) {
+lv_obj_t* build_background(lv_obj_t* screen) {
     static const Glow glows[] = {
         {90, 60, 430, 124, 58, 237, 0.42f},    // purple
         {470, -20, 330, 236, 72, 153, 0.26f},  // pink
@@ -102,7 +200,7 @@ void build_background(lv_obj_t* screen) {
     lv_draw_buf_t* buf = lv_draw_buf_create(kWidth, kHeight, LV_COLOR_FORMAT_RGB565, 0);
     if (!buf) {
         lv_obj_set_style_bg_color(screen, lv_color_hex(0x0A0E1C), 0);
-        return;
+        return nullptr;
     }
     for (int y = 0; y < kHeight; ++y) {
         auto* row = reinterpret_cast<uint16_t*>(buf->data + y * buf->header.stride);
@@ -128,10 +226,116 @@ void build_background(lv_obj_t* screen) {
     lv_obj_t* image = lv_image_create(screen);
     lv_obj_set_pos(image, 0, 0);
     lv_image_set_src(image, buf);
+    return image;
 }
+
+// ---- device pickers ----
+
+/// "Headset Earphone (A50 Voice)" -> "A50 Voice": Windows puts the useful
+/// part of a device name in parentheses, and the screen is narrow.
+std::string short_name(const std::string& name) {
+    size_t close = name.rfind(')');
+    size_t open = close == std::string::npos ? std::string::npos : name.rfind('(', close);
+    if (open != std::string::npos && close > open + 1) return name.substr(open + 1, close - open - 1);
+    return name;
+}
+
+/// Cuts `text` with an ellipsis so it fits `width` pixels in `font`.
+std::string fit(const std::string& text, const lv_font_t* font, int width) {
+    auto measure = [&](const std::string& s) { return lv_text_get_width(s.c_str(), static_cast<uint32_t>(s.size()), font, 0); };
+    if (measure(text) <= width) return text;
+    std::string cut = text;
+    const std::string dots = "\xE2\x80\xA6";
+    while (!cut.empty()) {
+        cut.pop_back();
+        while (!cut.empty() && (static_cast<unsigned char>(cut.back()) & 0xC0) == 0x80) cut.pop_back();  // whole UTF-8 chars
+        if (measure(cut + dots) <= width) break;
+    }
+    return cut + dots;
+}
+
+/// The picker shows its own fitted text rather than the raw option, which
+/// would run under the arrow.
+void show_picker_text(lv_obj_t* dd, int slot, const std::string& text, bool missing) {
+    lv_obj_update_layout(dd);  // a freshly created picker has no width yet
+    const int room = lv_obj_get_width(dd) - 12 - 30;  // left padding, arrow
+    picker_texts[slot] = fit(text, &inter_14, room);
+    lv_dropdown_set_text(dd, picker_texts[slot].c_str());
+    lv_obj_set_style_text_color(dd, missing ? kWarn : kText, 0);
+}
+
+void on_picker_changed(lv_event_t* e) {
+    lv_obj_t* dd = static_cast<lv_obj_t*>(lv_event_get_target(e));
+    int slot = static_cast<int>(reinterpret_cast<intptr_t>(lv_event_get_user_data(e)));
+    const auto& values = picker_values[slot];
+    uint32_t index = lv_dropdown_get_selected(dd);
+    if (index >= values.size()) return;
+    show_picker_text(dd, slot, values[index].empty() ? texts->default_short : short_name(values[index]), false);
+    send_line(panel::device_line(slot, values[index]));
+}
+
+lv_obj_t* create_picker(lv_obj_t* parent, int slot, int width) {
+    lv_obj_t* dd = lv_dropdown_create(parent);
+    lv_obj_set_size(dd, width, 34);
+    glass(dd, 17, 20);
+    lv_obj_set_style_pad_left(dd, 12, 0);
+    lv_obj_set_style_pad_right(dd, 10, 0);
+    lv_obj_set_style_pad_ver(dd, 8, 0);
+    lv_obj_set_style_text_font(dd, &inter_14, 0);
+    lv_obj_set_style_text_color(dd, kText, 0);
+    lv_obj_set_style_text_opa(dd, 200, 0);
+    lv_obj_set_style_text_font(dd, &lv_font_montserrat_14, LV_PART_INDICATOR);  // the arrow symbol
+    lv_obj_set_style_shadow_width(dd, 0, 0);
+    lv_obj_t* list = lv_dropdown_get_list(dd);
+    lv_obj_set_style_bg_color(list, kListBg, 0);
+    lv_obj_set_style_bg_opa(list, 245, 0);
+    lv_obj_set_style_border_color(list, lv_color_white(), 0);
+    lv_obj_set_style_border_opa(list, 50, 0);
+    lv_obj_set_style_radius(list, 12, 0);
+    lv_obj_set_style_text_font(list, &inter_14, 0);
+    lv_obj_set_style_text_color(list, kText, 0);
+    lv_obj_set_style_bg_color(list, lv_color_hex(0x3A3F55), LV_PART_SELECTED | LV_STATE_CHECKED);
+    lv_obj_set_style_bg_color(list, lv_color_hex(0x4A5070), LV_PART_SELECTED | LV_STATE_PRESSED);
+    lv_obj_add_event_cb(dd, on_picker_changed, LV_EVENT_VALUE_CHANGED, reinterpret_cast<void*>(static_cast<intptr_t>(slot)));
+    return dd;
+}
+
+/// Fills a picker with "Windows default" and `devices`, selecting `chosen`
+/// (kept visible as "not connected" when it is unplugged).
+void fill_picker(lv_obj_t* dd, int slot, const std::vector<std::string>& devices, const std::string& chosen) {
+    lv_obj_update_layout(dd);
+    const int room = lv_obj_get_width(dd) - 24;
+    std::vector<std::string> values{""};
+    std::string options = texts->windows_default;
+    for (const std::string& d : devices) {
+        values.push_back(d);
+        options += "\n" + fit(short_name(d), &inter_14, room);
+    }
+    uint32_t selected = 0;
+    bool missing = false;
+    if (!chosen.empty()) {
+        auto it = std::find(devices.begin(), devices.end(), chosen);
+        if (it != devices.end()) {
+            selected = static_cast<uint32_t>(it - devices.begin()) + 1;
+        } else {
+            missing = true;
+            values.push_back(chosen);
+            options += "\n" + fit(short_name(chosen) + " (" + texts->not_connected + ")", &inter_14, room);
+            selected = static_cast<uint32_t>(values.size()) - 1;
+        }
+    }
+    picker_values[slot] = values;
+    picker_options[slot] = options;
+    lv_dropdown_set_options(dd, picker_options[slot].c_str());
+    lv_dropdown_set_selected(dd, selected);
+    show_picker_text(dd, slot, chosen.empty() ? texts->default_short : short_name(chosen), missing);
+}
+
+// ---- mixer page ----
+
 void on_card_clicked(lv_event_t* e) {
     int slot = static_cast<int>(reinterpret_cast<intptr_t>(lv_event_get_user_data(e)));
-    if (touch_mute) touch_mute(slot);
+    send_line(panel::touch_mute_line(slot));
 }
 
 void style_arc(lv_obj_t* arc, int width, lv_opa_t track_opa) {
@@ -149,42 +353,21 @@ void style_arc(lv_obj_t* arc, int width, lv_opa_t track_opa) {
     lv_obj_set_style_pad_all(arc, 0, 0);
 }
 
-ChannelView build_channel(lv_obj_t* screen, int slot) {
+ChannelView build_channel(lv_obj_t* page, int slot) {
     ChannelView v{};
     int x = kCardX + slot * (kCardW + kCardGap);
 
-    // Glass card: a flat translucent white (a faint gradient bands badly in
-    // 16-bit colour), a faint rim, and a brighter top-left edge to mimic the
-    // edge lighting of the desktop app.
-    v.card = plain(screen);
+    v.card = plain(page);
     lv_obj_set_pos(v.card, x, kCardY);
     lv_obj_set_size(v.card, kCardW, kCardH);
-    lv_obj_set_style_radius(v.card, 22, 0);
-    lv_obj_set_style_bg_color(v.card, lv_color_white(), 0);
-    lv_obj_set_style_bg_opa(v.card, 24, 0);
-    lv_obj_set_style_border_color(v.card, lv_color_white(), 0);
-    lv_obj_set_style_border_opa(v.card, 38, 0);
-    lv_obj_set_style_border_width(v.card, 1, 0);
+    glass(v.card, 22);
     lv_obj_set_style_bg_opa(v.card, 48, LV_STATE_PRESSED);
     lv_obj_add_flag(v.card, LV_OBJ_FLAG_CLICKABLE);
     lv_obj_add_event_cb(v.card, on_card_clicked, LV_EVENT_CLICKED, reinterpret_cast<void*>(static_cast<intptr_t>(slot)));
+    edge_light(v.card, kCardW, kCardH, 22);
 
-    lv_obj_t* edge = plain(v.card);
-    lv_obj_set_size(edge, kCardW, kCardH);
-    lv_obj_set_style_radius(edge, 22, 0);
-    lv_obj_set_style_border_color(edge, lv_color_white(), 0);
-    lv_obj_set_style_border_opa(edge, 110, 0);
-    lv_obj_set_style_border_width(edge, 1, 0);
-    lv_obj_set_style_border_side(edge, static_cast<lv_border_side_t>(LV_BORDER_SIDE_TOP | LV_BORDER_SIDE_LEFT), 0);
-    lv_obj_remove_flag(edge, LV_OBJ_FLAG_CLICKABLE);
-
-    v.dot = plain(v.card);
+    v.dot = dot(v.card, kNeutral);
     lv_obj_set_pos(v.dot, 18, 24);
-    lv_obj_set_size(v.dot, 10, 10);
-    lv_obj_set_style_radius(v.dot, LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_opa(v.dot, LV_OPA_COVER, 0);
-    lv_obj_set_style_shadow_width(v.dot, 12, 0);
-    lv_obj_set_style_shadow_opa(v.dot, LV_OPA_80, 0);
 
     v.name = label(v.card, &inter_semi_20, kText);
     lv_obj_set_pos(v.name, 36, 16);
@@ -209,12 +392,8 @@ ChannelView build_channel(lv_obj_t* screen, int slot) {
     v.mute = plain(v.card);
     lv_obj_set_size(v.mute, 120, 42);
     lv_obj_set_pos(v.mute, (kCardW - 120) / 2, 248);
-    lv_obj_set_style_radius(v.mute, 21, 0);
-    lv_obj_set_style_bg_color(v.mute, lv_color_white(), 0);
-    lv_obj_set_style_bg_opa(v.mute, 20, 0);
-    lv_obj_set_style_border_color(v.mute, lv_color_white(), 0);
+    glass(v.mute, 21, 20);
     lv_obj_set_style_border_opa(v.mute, 46, 0);
-    lv_obj_set_style_border_width(v.mute, 1, 0);
     lv_obj_remove_flag(v.mute, LV_OBJ_FLAG_CLICKABLE);
     v.mute_label = label(v.mute, &inter_16, kText);
     lv_label_set_text(v.mute_label, texts->mute);
@@ -228,8 +407,24 @@ ChannelView build_channel(lv_obj_t* screen, int slot) {
     lv_label_set_long_mode(v.sub, LV_LABEL_LONG_DOT);
     lv_label_set_text(v.sub, "");
 
+    v.mic_picker = create_picker(v.card, slot, kCardW - 28);
+    lv_obj_set_pos(v.mic_picker, 14, 312);
+    lv_obj_add_flag(v.mic_picker, LV_OBJ_FLAG_HIDDEN);
+
     lv_obj_add_flag(v.card, LV_OBJ_FLAG_HIDDEN);
     return v;
+}
+
+void show_mic_picker(ChannelView& v, int slot, const panel::Channel& ch) {
+    bool show = ch.capture && model && model->devices.present;
+    if (show) fill_picker(v.mic_picker, slot, model->devices.inputs, model->devices.selected[slot]);
+    if (show) {
+        lv_obj_remove_flag(v.mic_picker, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(v.sub, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(v.mic_picker, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(v.sub, LV_OBJ_FLAG_HIDDEN);
+    }
 }
 
 void show_channel(ChannelView& v, const panel::Channel& ch) {
@@ -265,14 +460,410 @@ void show_channel(ChannelView& v, const panel::Channel& ch) {
     lv_obj_set_style_opa(v.card, ch.available ? LV_OPA_COVER : 140, 0);
 }
 
+// ---- app page ----
+
+const lv_image_dsc_t* icon_for(const std::string& id) {
+    if (!model) return nullptr;
+    auto it = model->icons.find(id);
+    if (it == model->icons.end()) return nullptr;
+    const panel::Icon& icon = it->second;
+    lv_image_dsc_t& dsc = icon_images[id];
+    dsc = {};
+    dsc.header.magic = LV_IMAGE_HEADER_MAGIC;
+    dsc.header.cf = LV_COLOR_FORMAT_RGB565A8;
+    dsc.header.w = icon.width;
+    dsc.header.h = icon.height;
+    dsc.header.stride = static_cast<uint32_t>(icon.width) * 2;
+    dsc.data_size = static_cast<uint32_t>(icon.pixels.size());
+    dsc.data = icon.pixels.data();
+    return &dsc;
+}
+
+lv_color_t slot_color(int slot) {
+    if (!model || slot < 0 || slot >= panel::kSlots) return kNeutral;
+    return lv_color_hex(model->channels[slot].color);
+}
+
+/// The look of a chip, used both in the lists and for the dragged ghost.
+lv_obj_t* chip_body(lv_obj_t* parent, const panel::App& app, int width) {
+    lv_obj_t* chip = plain(parent);
+    lv_obj_set_size(chip, width, kChipH);
+    glass(chip, 12, 34);
+    lv_obj_set_style_border_side(chip, LV_BORDER_SIDE_FULL, 0);
+    lv_obj_set_style_bg_opa(chip, 60, LV_STATE_PRESSED);
+    lv_obj_set_flex_flow(chip, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(chip, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_left(chip, 8, 0);
+    lv_obj_set_style_pad_right(chip, 8, 0);
+    lv_obj_set_style_pad_column(chip, 8, 0);
+
+    const lv_image_dsc_t* image = app.has_icon ? icon_for(app.id) : nullptr;
+    if (image) {
+        lv_obj_t* img = lv_image_create(chip);
+        lv_image_set_src(img, image);
+        lv_obj_remove_flag(img, LV_OBJ_FLAG_CLICKABLE);
+    } else {
+        lv_obj_t* avatar = plain(chip);
+        lv_obj_set_size(avatar, 24, 24);
+        lv_obj_set_style_radius(avatar, 6, 0);
+        lv_obj_set_style_bg_color(avatar, slot_color(app.slot), 0);
+        lv_obj_set_style_bg_opa(avatar, LV_OPA_COVER, 0);
+        lv_obj_remove_flag(avatar, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_t* letter = label(avatar, &inter_14, lv_color_white());
+        char first[2] = {app.name.empty() ? '?' : app.name[0], 0};
+        lv_label_set_text(letter, first);
+        lv_obj_center(letter);
+    }
+
+    lv_obj_t* name = label(chip, &inter_14, kText);
+    lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
+    lv_label_set_text(name, app.name.c_str());
+    lv_obj_set_flex_grow(name, 1);
+    lv_obj_set_height(name, lv_font_get_line_height(&inter_14));  // one line, cut with "…"
+    lv_obj_remove_flag(name, LV_OBJ_FLAG_CLICKABLE);
+
+    if (app.automatic) {
+        lv_obj_t* badge = plain(chip);
+        lv_obj_set_size(badge, LV_SIZE_CONTENT, LV_SIZE_CONTENT);
+        lv_obj_set_style_radius(badge, 7, 0);
+        lv_obj_set_style_bg_color(badge, lv_color_white(), 0);
+        lv_obj_set_style_bg_opa(badge, 26, 0);
+        lv_obj_set_style_pad_hor(badge, 6, 0);
+        lv_obj_set_style_pad_ver(badge, 1, 0);
+        lv_obj_remove_flag(badge, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_t* text = label(badge, &inter_14, kText, 150);
+        lv_label_set_text(text, "auto");
+    }
+    return chip;
+}
+
+Column* column_at(const lv_point_t& point) {
+    for (Column& c : columns) {
+        lv_area_t area;
+        lv_obj_get_coords(c.obj, &area);
+        if (point.x >= area.x1 && point.x <= area.x2 && point.y >= area.y1 && point.y <= area.y2) return &c;
+    }
+    return nullptr;
+}
+
+void highlight(const Column* target) {
+    for (Column& c : columns) {
+        bool on = &c == target;
+        lv_obj_set_style_border_color(c.obj, on ? c.accent : lv_color_white(), 0);
+        lv_obj_set_style_border_opa(c.obj, on ? LV_OPA_COVER : 38, 0);
+        lv_obj_set_style_border_width(c.obj, on ? 2 : 1, 0);
+    }
+}
+
+void close_menu() {
+    if (menu) {
+        lv_obj_delete(menu);
+        menu = nullptr;
+    }
+}
+
+void rebuild_apps_page();
+
+void finish_drag(bool drop) {
+    if (!drag.active) return;
+    lv_indev_t* indev = lv_indev_active();
+    if (drop && indev && drag.app < chip_apps.size()) {
+        lv_point_t point;
+        lv_indev_get_point(indev, &point);
+        Column* target = column_at(point);
+        const panel::App& app = chip_apps[drag.app];
+        if (target && target->slot != app.slot) send_line(panel::assign_line(app.id, target->slot));
+    }
+    lv_obj_delete(drag.ghost);
+    lv_obj_set_style_opa(drag.chip, LV_OPA_COVER, 0);
+    if (drag.list) lv_obj_add_flag(drag.list, LV_OBJ_FLAG_SCROLLABLE);
+    highlight(nullptr);
+    drag = Drag{};
+    if (apps_page_dirty) rebuild_apps_page();
+}
+
+void on_menu_choice(lv_event_t* e) {
+    int choice = static_cast<int>(reinterpret_cast<intptr_t>(lv_event_get_user_data(e)));
+    size_t app = static_cast<size_t>(choice >> 8);
+    int slot = (choice & 0xFF) - 2;  // packed as slot + 2 so -1/-2 fit
+    close_menu();
+    if (app < chip_apps.size()) send_line(panel::assign_line(chip_apps[app].id, slot));
+}
+
+lv_obj_t* menu_item(lv_obj_t* panel_obj, const char* text, lv_color_t color, bool current, size_t app, int slot) {
+    lv_obj_t* item = plain(panel_obj);
+    lv_obj_set_size(item, LV_PCT(100), 42);
+    lv_obj_set_style_radius(item, 10, 0);
+    lv_obj_set_style_bg_color(item, lv_color_white(), 0);
+    lv_obj_set_style_bg_opa(item, current ? 40 : 0, 0);
+    lv_obj_set_style_bg_opa(item, 60, LV_STATE_PRESSED);
+    lv_obj_set_flex_flow(item, LV_FLEX_FLOW_ROW);
+    lv_obj_set_flex_align(item, LV_FLEX_ALIGN_START, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+    lv_obj_set_style_pad_left(item, 12, 0);
+    lv_obj_set_style_pad_column(item, 10, 0);
+    lv_obj_add_flag(item, LV_OBJ_FLAG_CLICKABLE);
+    int packed = static_cast<int>(app << 8) | (slot + 2);
+    lv_obj_add_event_cb(item, on_menu_choice, LV_EVENT_CLICKED, reinterpret_cast<void*>(static_cast<intptr_t>(packed)));
+    lv_obj_t* d = dot(item, color);
+    lv_obj_remove_flag(d, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_t* l = label(item, &inter_16, kText);
+    lv_label_set_text(l, text);
+    return item;
+}
+
+void open_menu(size_t app_index) {
+    close_menu();
+    if (app_index >= chip_apps.size() || !model) return;
+    const panel::App& app = chip_apps[app_index];
+
+    menu = plain(lv_layer_top());
+    lv_obj_set_size(menu, kWidth, kHeight);
+    lv_obj_set_style_bg_color(menu, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(menu, 140, 0);
+    lv_obj_add_flag(menu, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(menu, [](lv_event_t* e) {
+        if (lv_event_get_target(e) == lv_event_get_current_target(e)) close_menu();
+    }, LV_EVENT_CLICKED, nullptr);
+
+    lv_obj_t* box = plain(menu);
+    lv_obj_set_width(box, 320);
+    lv_obj_set_height(box, LV_SIZE_CONTENT);
+    glass(box, 18, 255);
+    lv_obj_set_style_bg_color(box, kListBg, 0);
+    lv_obj_set_style_pad_all(box, 10, 0);
+    lv_obj_set_style_pad_row(box, 4, 0);
+    lv_obj_set_flex_flow(box, LV_FLEX_FLOW_COLUMN);
+    lv_obj_center(box);
+
+    lv_obj_t* title = label(box, &inter_14, kText, 160);
+    std::string heading = std::string(texts->move_to) + ": " + app.name;
+    lv_label_set_text(title, heading.c_str());
+    lv_obj_set_style_pad_left(title, 8, 0);
+    lv_obj_set_style_pad_bottom(title, 4, 0);
+
+    for (int slot = 0; slot < panel::kSlots; ++slot) {
+        const panel::Channel& ch = model->channels[slot];
+        if (!ch.present || ch.capture) continue;
+        menu_item(box, ch.name.c_str(), lv_color_hex(ch.color), !app.automatic && app.slot == slot, app_index, slot);
+    }
+    menu_item(box, texts->not_controlled, kNeutral, app.slot == panel::kUncontrolled, app_index, panel::kUncontrolled);
+    menu_item(box, texts->automatic, lv_color_white(), app.automatic, app_index, panel::kAutomatic);
+}
+
+void on_chip_event(lv_event_t* e) {
+    lv_obj_t* chip = static_cast<lv_obj_t*>(lv_event_get_current_target(e));
+    size_t app = static_cast<size_t>(reinterpret_cast<intptr_t>(lv_event_get_user_data(e)));
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_point_t point;
+
+    switch (code) {
+        case LV_EVENT_LONG_PRESSED: {
+            // Pick up: a ghost follows the finger; the list stops scrolling meanwhile.
+            if (app >= chip_apps.size()) return;
+            lv_indev_get_point(lv_indev_active(), &point);
+            lv_area_t area;
+            lv_obj_get_coords(chip, &area);
+            drag.active = true;
+            drag.chip = chip;
+            drag.app = app;
+            drag.list = lv_obj_get_parent(chip);
+            drag.offset = {point.x - area.x1, point.y - area.y1};
+            lv_obj_remove_flag(drag.list, LV_OBJ_FLAG_SCROLLABLE);
+            drag.ghost = chip_body(lv_layer_top(), chip_apps[app], lv_area_get_width(&area));
+            lv_obj_set_style_bg_color(drag.ghost, lv_color_hex(0x3A3F55), 0);
+            lv_obj_set_style_bg_opa(drag.ghost, 235, 0);
+            lv_obj_set_style_shadow_width(drag.ghost, 24, 0);
+            lv_obj_set_style_shadow_opa(drag.ghost, LV_OPA_50, 0);
+            lv_obj_set_pos(drag.ghost, area.x1, area.y1);
+            lv_obj_set_style_opa(chip, 90, 0);
+            break;
+        }
+        case LV_EVENT_PRESSING:
+            if (!drag.active) return;
+            lv_indev_get_point(lv_indev_active(), &point);
+            lv_obj_set_pos(drag.ghost, point.x - drag.offset.x, point.y - drag.offset.y);
+            highlight(column_at(point));
+            break;
+        case LV_EVENT_RELEASED:
+            finish_drag(true);
+            break;
+        case LV_EVENT_PRESS_LOST:
+            finish_drag(false);
+            break;
+        case LV_EVENT_SHORT_CLICKED:
+            open_menu(app);
+            break;
+        default:
+            break;
+    }
+}
+
+Column build_column(lv_obj_t* page, int x, int width, int slot) {
+    Column c{};
+    c.slot = slot;
+    bool uncontrolled = slot == panel::kUncontrolled;
+    c.accent = uncontrolled ? kNeutral : slot_color(slot);
+
+    c.obj = plain(page);
+    lv_obj_set_pos(c.obj, x, kCardY);
+    lv_obj_set_size(c.obj, width, kCardH);
+    glass(c.obj, 22);
+    edge_light(c.obj, width, kCardH, 22);
+
+    lv_obj_t* d = dot(c.obj, c.accent);
+    lv_obj_set_pos(d, 18, 24);
+    // Long titles ("Not controlled") step down a size before being cut with "…".
+    const char* title = uncontrolled ? texts->not_controlled : model->channels[slot].name.c_str();
+    const int room = width - 48;
+    const lv_font_t* font = &inter_semi_20;
+    if (lv_text_get_width(title, static_cast<uint32_t>(std::strlen(title)), font, 0) > room) font = &inter_16;
+    lv_obj_t* name = label(c.obj, font, kText);
+    lv_obj_set_size(name, room, lv_font_get_line_height(font));
+    lv_obj_set_pos(name, 36, font == &inter_16 ? 19 : 16);
+    lv_label_set_long_mode(name, LV_LABEL_LONG_DOT);
+    lv_label_set_text(name, title);
+
+    int list_y = 54;
+    if (!uncontrolled && model->devices.present && model->devices.routing) {
+        lv_obj_t* picker = create_picker(c.obj, slot, width - 24);
+        lv_obj_set_pos(picker, 12, 52);
+        fill_picker(picker, slot, model->devices.outputs, model->devices.selected[slot]);
+        list_y = 96;
+    }
+
+    c.list = plain(c.obj);
+    lv_obj_set_pos(c.list, 8, list_y);
+    lv_obj_set_size(c.list, width - 16, kCardH - list_y - 8);
+    lv_obj_set_style_radius(c.list, 14, 0);
+    lv_obj_set_style_bg_color(c.list, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(c.list, 46, 0);
+    lv_obj_set_style_pad_all(c.list, 6, 0);
+    lv_obj_set_style_pad_row(c.list, 6, 0);
+    lv_obj_set_flex_flow(c.list, LV_FLEX_FLOW_COLUMN);
+    lv_obj_add_flag(c.list, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_set_scroll_dir(c.list, LV_DIR_VER);
+    lv_obj_set_scrollbar_mode(c.list, LV_SCROLLBAR_MODE_ACTIVE);
+
+    int chip_w = width - 28;
+    bool any = false;
+    for (size_t i = 0; i < chip_apps.size(); ++i) {
+        if (chip_apps[i].slot != slot) continue;
+        any = true;
+        lv_obj_t* chip = chip_body(c.list, chip_apps[i], chip_w);
+        lv_obj_add_flag(chip, LV_OBJ_FLAG_CLICKABLE);
+        void* index = reinterpret_cast<void*>(static_cast<intptr_t>(i));
+        for (lv_event_code_t code : {LV_EVENT_LONG_PRESSED, LV_EVENT_PRESSING, LV_EVENT_RELEASED,
+                                     LV_EVENT_PRESS_LOST, LV_EVENT_SHORT_CLICKED}) {
+            lv_obj_add_event_cb(chip, on_chip_event, code, index);
+        }
+    }
+    if (!any) {
+        lv_obj_t* hint = label(c.list, &inter_14, kText, 90);
+        lv_label_set_text(hint, texts->drop_here);
+        lv_obj_set_width(hint, LV_PCT(100));
+        lv_obj_set_style_text_align(hint, LV_TEXT_ALIGN_CENTER, 0);
+        lv_obj_set_style_pad_top(hint, 20, 0);
+    }
+    return c;
+}
+
+/// Rebuilds the app page from the model. Never during a drag: the dragged
+/// chip would be deleted under the finger, so it waits for the drop.
+void rebuild_apps_page() {
+    if (drag.active) {
+        apps_page_dirty = true;
+        return;
+    }
+    apps_page_dirty = false;
+    close_menu();
+    lv_obj_clean(page_apps);
+    columns.clear();
+    picker_values.erase(picker_values.begin(), picker_values.end());
+    if (!model || !is_connected) return;
+
+    chip_apps = model->apps;
+    std::vector<int> slots;
+    for (int i = 0; i < panel::kSlots; ++i) {
+        if (model->channels[i].present && !model->channels[i].capture) slots.push_back(i);
+    }
+    slots.push_back(panel::kUncontrolled);
+
+    const int n = static_cast<int>(slots.size());
+    const int width = (kWidth - 2 * kMargin - (n - 1) * kCardGap) / n;
+    for (int i = 0; i < n; ++i) {
+        columns.push_back(build_column(page_apps, kMargin + i * (width + kCardGap), width, slots[i]));
+    }
+    // The mixer page's mic picker shares `picker_values`; refill it.
+    for (int i = 0; i < panel::kSlots; ++i) {
+        if (model->channels[i].present) show_mic_picker(views[i], i, model->channels[i]);
+    }
+}
+
+/// Names, colours and kinds of the channels: when these change, the app
+/// page's columns must be rebuilt (volume changes don't count).
+std::string channel_structure(const panel::Model& m) {
+    std::string key;
+    for (const panel::Channel& ch : m.channels) {
+        char color[8];
+        std::snprintf(color, sizeof color, "%06X", static_cast<unsigned>(ch.color));
+        key += (ch.present ? "1" : "0") + ch.name + color + (ch.capture ? "c" : "p") + "|";
+    }
+    return key;
+}
+
+// ---- tabs ----
+
+void show_tab(int tab) {
+    current_tab = tab;
+    close_menu();
+    if (tab == 0) {
+        lv_obj_remove_flag(page_mixer, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_add_flag(page_apps, LV_OBJ_FLAG_HIDDEN);
+    } else {
+        lv_obj_add_flag(page_mixer, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(page_apps, LV_OBJ_FLAG_HIDDEN);
+    }
+    for (int i = 0; i < 2; ++i) lv_obj_set_style_bg_opa(tab_buttons[i], i == tab ? 46 : 0, 0);
+}
+
+void on_tab_clicked(lv_event_t* e) {
+    show_tab(static_cast<int>(reinterpret_cast<intptr_t>(lv_event_get_user_data(e))));
+}
+
+void build_tabs(lv_obj_t* screen) {
+    tabs = plain(screen);
+    lv_obj_set_size(tabs, LV_SIZE_CONTENT, 36);
+    glass(tabs, 18, 16);
+    lv_obj_set_style_pad_all(tabs, 3, 0);
+    lv_obj_set_style_pad_column(tabs, 2, 0);
+    lv_obj_set_flex_flow(tabs, LV_FLEX_FLOW_ROW);
+    lv_obj_align(tabs, LV_ALIGN_TOP_MID, 0, 13);
+    for (int i = 0; i < 2; ++i) {
+        lv_obj_t* b = plain(tabs);
+        lv_obj_set_size(b, 108, 30);
+        lv_obj_set_style_radius(b, 15, 0);
+        lv_obj_set_style_bg_color(b, lv_color_white(), 0);
+        lv_obj_add_flag(b, LV_OBJ_FLAG_CLICKABLE);
+        lv_obj_add_event_cb(b, on_tab_clicked, LV_EVENT_CLICKED, reinterpret_cast<void*>(static_cast<intptr_t>(i)));
+        tab_buttons[i] = b;
+        tab_labels[i] = label(b, &inter_14, kText);
+        lv_obj_center(tab_labels[i]);
+    }
+}
+
+void set_tab_texts() {
+    lv_label_set_text(tab_labels[0], texts->tab_mixer);
+    lv_label_set_text(tab_labels[1], texts->tab_apps);
+}
+
 }  // namespace
 
-void init(TouchMuteFn on_touch_mute) {
-    touch_mute = on_touch_mute;
+void init(SendFn send_fn) {
+    send = send_fn;
     lv_obj_t* screen = lv_screen_active();
     lv_obj_remove_flag(screen, LV_OBJ_FLAG_SCROLLABLE);
     lv_obj_set_style_bg_color(screen, lv_color_hex(0x0A0E1C), 0);
-    build_background(screen);
+    lv_obj_t* background = build_background(screen);
 
     lv_obj_t* title = label(screen, &inter_16, kText, 217);
     lv_label_set_text(title, "DIY Sound Mixer");
@@ -285,12 +876,27 @@ void init(TouchMuteFn on_touch_mute) {
     lv_obj_set_style_radius(status_dot, LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_opa(status_dot, LV_OPA_COVER, 0);
 
-    for (int i = 0; i < panel::kSlots; ++i) views[i] = build_channel(screen, i);
+    build_tabs(screen);
+    set_tab_texts();
+
+    page_mixer = plain(screen);
+    lv_obj_set_size(page_mixer, kWidth, kHeight);
+    lv_obj_remove_flag(page_mixer, LV_OBJ_FLAG_CLICKABLE);
+    page_apps = plain(screen);
+    lv_obj_set_size(page_apps, kWidth, kHeight);
+    lv_obj_remove_flag(page_apps, LV_OBJ_FLAG_CLICKABLE);
+    // Back to front: aurora, pages, then the header (title, tabs, status).
+    lv_obj_move_background(page_apps);
+    lv_obj_move_background(page_mixer);
+    if (background) lv_obj_move_background(background);
+
+    for (int i = 0; i < panel::kSlots; ++i) views[i] = build_channel(page_mixer, i);
 
     waiting = label(screen, &inter_16, kText, 170);
     lv_label_set_text(waiting, texts->waiting);
     lv_obj_center(waiting);
 
+    show_tab(0);
     set_connected(false);
 }
 
@@ -301,27 +907,63 @@ void set_connected(bool connected) {
     lv_obj_set_style_bg_color(status_dot, lv_color_hex(connected ? 0x34D399 : 0xF59E0B), 0);
     lv_obj_align_to(status_dot, status_label, LV_ALIGN_OUT_LEFT_MID, -8, 0);
     if (!connected) {
-        for (ChannelView& v : views) lv_obj_add_flag(v.card, LV_OBJ_FLAG_HIDDEN);
+        // Drop everything that points into the model before it is cleared.
+        finish_drag(false);
+        close_menu();
+        lv_obj_clean(page_apps);
+        columns.clear();
+        chip_apps.clear();
+        icon_images.clear();
+        lv_image_cache_drop(nullptr);
+        structure_key.clear();
+        model = nullptr;
+        for (ChannelView& v : views) {
+            lv_obj_add_flag(v.card, LV_OBJ_FLAG_HIDDEN);
+            lv_obj_add_flag(v.mic_picker, LV_OBJ_FLAG_HIDDEN);
+        }
+        lv_obj_add_flag(tabs, LV_OBJ_FLAG_HIDDEN);
+        show_tab(0);
         lv_obj_remove_flag(waiting, LV_OBJ_FLAG_HIDDEN);
     }
 }
 
-void apply(const panel::Model& model, const panel::Update& update) {
+void apply(const panel::Model& m, const panel::Update& update) {
+    model = &m;
     if (update.language) {
-        texts = model.norwegian ? &kNorwegian : &kEnglish;
+        texts = m.norwegian ? &kNorwegian : &kEnglish;
         lv_label_set_text(waiting, texts->waiting);
         lv_obj_center(waiting);
+        set_tab_texts();
         set_connected(is_connected);
+        model = &m;
     }
     bool any = false;
     for (int i = 0; i < panel::kSlots; ++i) {
-        if (update.channels & (1 << i)) show_channel(views[i], model.channels[i]);
-        any |= model.channels[i].present;
+        if (update.channels & (1 << i)) show_channel(views[i], m.channels[i]);
+        any |= m.channels[i].present;
     }
-    if (any) lv_obj_add_flag(waiting, LV_OBJ_FLAG_HIDDEN);
+    if (any) {
+        lv_obj_add_flag(waiting, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_remove_flag(tabs, LV_OBJ_FLAG_HIDDEN);
+    }
     if (update.meters) {
         for (int i = 0; i < panel::kSlots; ++i) {
-            if (lv_arc_get_value(views[i].meter) != model.meters[i]) lv_arc_set_value(views[i].meter, model.meters[i]);
+            if (lv_arc_get_value(views[i].meter) != m.meters[i]) lv_arc_set_value(views[i].meter, m.meters[i]);
+        }
+    }
+    if (update.icons) lv_image_cache_drop(nullptr);
+
+    std::string key = channel_structure(m);
+    bool structure = key != structure_key;
+    structure_key = key;
+    if (update.apps || update.icons || update.devices || update.language || structure) {
+        rebuild_apps_page();
+    } else if (update.channels) {
+        // The mic picker may need to appear once the channel kind is known.
+        for (int i = 0; i < panel::kSlots; ++i) {
+            if ((update.channels & (1 << i)) && m.channels[i].capture && lv_obj_has_flag(views[i].mic_picker, LV_OBJ_FLAG_HIDDEN)) {
+                show_mic_picker(views[i], i, m.channels[i]);
+            }
         }
     }
 }

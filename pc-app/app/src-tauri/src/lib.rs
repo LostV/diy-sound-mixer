@@ -4,8 +4,7 @@ mod tray;
 use std::sync::{Arc, Mutex};
 
 use mixer_core::{
-    Assignment, AudioBackend, Command, Language, MixerConfig, MixerHost, MixerSnapshot,
-    NullBackend,
+    Assignment, AudioBackend, Command, Language, MixerConfig, MixerHost, MixerSnapshot, NullBackend,
 };
 use mixer_devices::{DeviceHub, HostMessage};
 use tauri::{
@@ -40,6 +39,25 @@ fn make_backend() -> Box<dyn AudioBackend> {
         Err(e) => log::error!("starting Windows audio backend: {e}"),
     }
     Box::new(NullBackend)
+}
+
+/// App icons for the screen's app page, at the size the hub sends.
+fn app_icon_rgba(path: &str) -> Option<mixer_devices::hub::IconRgba> {
+    #[cfg(windows)]
+    {
+        let size = u32::from(mixer_devices::hub::ICON_SIZE);
+        let (width, height, rgba) = mixer_wasapi::icon_rgba(path, size)?;
+        Some(mixer_devices::hub::IconRgba {
+            width: u16::try_from(width).ok()?,
+            height: u16::try_from(height).ok()?,
+            rgba,
+        })
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = path;
+        None
+    }
 }
 
 /// Runs on the mixer thread ~30 times a second.
@@ -250,6 +268,11 @@ pub fn run() {
             });
 
             let devices = Devices::default();
+            devices
+                .0
+                .lock()
+                .expect("devices lock")
+                .set_icon_source(Box::new(app_icon_rgba));
             let links = links::Links::default();
             app.manage(devices.clone());
             let handle = app.handle().clone();

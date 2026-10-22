@@ -21,6 +21,17 @@ firmware/panel-esp32/build-sim/Release/panel_sim.exe
 
 Start the PC app first (or afterwards: the simulator reconnects every second). Tap a channel to toggle mute. To connect elsewhere, pass a host and port: `panel_sim.exe 127.0.0.1 47800`.
 
+### The two pages
+
+- **Mixer:** rings, volume and mute per channel. The mic card has a picker for the microphone.
+- **Apps:** one column per playback channel, plus "Not controlled". **Hold** an app (long press), **drag** it to another column and **let go**. The target column lights up in its colour. A **short tap** opens a menu with the same choices, plus "Automatic (rules)". Each column has a picker for its output device. Names are shortened to the part in parentheses ("A50 Voice"), and an unplugged device is shown in yellow.
+
+In the simulator the mouse works as a finger: hold the button for about half a second to pick up an app.
+
+### Test hook
+
+When `PANEL_SIM_INPUT` points at a file, lines appended to it drive a virtual finger: `down X Y`, `move X Y` and `up`, in screen coordinates. This is useful for automated screenshots and tests. Posted window messages can't hold a press, because SDL checks the real mouse button.
+
 ## Notes for the hardware build (phase 4)
 
 - **Background:** it is computed once at startup into an RGB565 image with ordered dithering. LVGL shadows and gradients band visibly in 16-bit colour, and redrawing them every frame is slow on the ESP32. Allocation uses `malloc` (`LV_STDLIB_CLIB`), so the 768 KB buffer lands in PSRAM.

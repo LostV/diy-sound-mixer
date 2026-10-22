@@ -8,4 +8,6 @@ pub mod hub;
 pub mod protocol;
 
 pub use hub::{DeviceHub, LinkId};
-pub use protocol::{DeviceKind, DeviceMessage, HostMessage, PROTOCOL_VERSION};
+pub use protocol::{
+    AppItem, AssignTarget, DeviceKind, DeviceMessage, HostMessage, PROTOCOL_VERSION,
+};
