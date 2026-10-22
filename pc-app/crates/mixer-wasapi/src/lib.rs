@@ -3,9 +3,10 @@
 
 #![cfg(windows)]
 
+mod loopback;
 mod process;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use mixer_core::{AudioBackend, CaptureInfo, SessionInfo};
 use windows::{
@@ -13,7 +14,7 @@ use windows::{
         Devices::FunctionDiscovery::PKEY_Device_FriendlyName,
         Foundation::S_OK,
         Media::Audio::{
-            AudioSessionStateExpired, DEVICE_STATE_ACTIVE,
+            AudioSessionStateActive, AudioSessionStateExpired, DEVICE_STATE_ACTIVE,
             Endpoints::{IAudioEndpointVolume, IAudioMeterInformation},
             IAudioSessionControl2, IAudioSessionManager2, IMMDevice, IMMDeviceEnumerator,
             ISimpleAudioVolume, MMDeviceEnumerator, eCapture, eConsole, eRender,
@@ -26,11 +27,21 @@ use windows::{
     core::{Interface, PWSTR, Result},
 };
 
-use crate::process::ProcessCache;
+use crate::{loopback::ProcessMeter, process::ProcessCache};
 
 struct Session {
+    pid: u32,
+    active: bool,
     volume: ISimpleAudioVolume,
+    /// Windows' own session meter. Only a fallback: on some devices it reports
+    /// the whole device's level, see `loopback`.
     meter: IAudioMeterInformation,
+}
+
+enum Meter {
+    Running(ProcessMeter),
+    /// Loopback capture was refused for this process; don't retry every scan.
+    Failed,
 }
 
 struct Device {
@@ -50,6 +61,8 @@ pub struct WasapiBackend {
     devices: HashMap<String, Device>,
     sessions: HashMap<String, Session>,
     capture: Option<(String, Capture)>,
+    /// Per-process level meters, keyed by pid.
+    meters: HashMap<u32, Meter>,
     processes: ProcessCache,
     com_initialized: bool,
 }
@@ -65,6 +78,7 @@ impl WasapiBackend {
             devices: HashMap::new(),
             sessions: HashMap::new(),
             capture: None,
+            meters: HashMap::new(),
             processes: ProcessCache::default(),
             com_initialized,
         })
@@ -106,7 +120,8 @@ impl WasapiBackend {
         let list = unsafe { device.sessions.GetSessionEnumerator()? };
         for i in 0..unsafe { list.GetCount()? } {
             let control = unsafe { list.GetSession(i)? };
-            if unsafe { control.GetState()? } == AudioSessionStateExpired {
+            let state = unsafe { control.GetState()? };
+            if state == AudioSessionStateExpired {
                 continue;
             }
             let control: IAudioSessionControl2 = control.cast()?;
@@ -132,6 +147,8 @@ impl WasapiBackend {
             handles.insert(
                 id.clone(),
                 Session {
+                    pid,
+                    active: state == AudioSessionStateActive && !is_system_sounds,
                     volume: control.cast()?,
                     meter: control.cast()?,
                 },
@@ -147,6 +164,34 @@ impl WasapiBackend {
             });
         }
         Ok(())
+    }
+
+    /// Starts a loopback meter for every process with an active session and
+    /// stops meters for processes that no longer have any session. Idle apps
+    /// keep their meter, so pausing and resuming music doesn't restart it.
+    fn refresh_meters(&mut self) {
+        let with_session: HashSet<u32> = self.sessions.values().map(|s| s.pid).collect();
+        self.meters.retain(|pid, _| with_session.contains(pid));
+
+        let active: HashSet<u32> = self
+            .sessions
+            .values()
+            .filter(|s| s.active && s.pid != 0)
+            .map(|s| s.pid)
+            .collect();
+        for pid in active {
+            self.meters
+                .entry(pid)
+                .or_insert_with(|| match ProcessMeter::start(pid) {
+                    Ok(meter) => Meter::Running(meter),
+                    Err(e) => {
+                        log::warn!(
+                            "loopback meter for pid {pid} unavailable, using session meter: {e}"
+                        );
+                        Meter::Failed
+                    }
+                });
+        }
     }
 
     fn capture_endpoints(&self) -> Result<Vec<(IMMDevice, String)>> {
@@ -217,14 +262,18 @@ impl AudioBackend for WasapiBackend {
         self.devices = devices;
         self.sessions = handles;
         self.processes.retain(out.iter().map(|s| s.pid));
+        self.refresh_meters();
         out
     }
 
     fn session_peak(&mut self, session_id: &str) -> f32 {
-        self.sessions
-            .get(session_id)
-            .and_then(|s| unsafe { s.meter.GetPeakValue() }.ok())
-            .unwrap_or(0.0)
+        let Some(session) = self.sessions.get(session_id) else {
+            return 0.0;
+        };
+        match self.meters.get(&session.pid) {
+            Some(Meter::Running(meter)) => meter.peak(),
+            _ => unsafe { session.meter.GetPeakValue() }.unwrap_or(0.0),
+        }
     }
 
     fn set_session_volume(&mut self, session_id: &str, volume: f32) {
@@ -288,6 +337,7 @@ impl AudioBackend for WasapiBackend {
 
 impl Drop for WasapiBackend {
     fn drop(&mut self) {
+        self.meters.clear();
         self.sessions.clear();
         self.devices.clear();
         self.capture = None;

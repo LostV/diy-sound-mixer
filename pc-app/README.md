@@ -35,7 +35,10 @@ Run from `pc-app`:
 ```bash
 cargo test --workspace
 cargo run -p mixer-wasapi --example scan
+cargo run -p mixer-wasapi --example meters
 ```
+
+`meters` prints live levels per app for a few seconds and is just as read-only.
 
 The `scan` example only reads: it lists audio sessions, which channel the rules put them in, and the microphones. An optional argument selects a mic by part of its name, e.g. `scan "A50 Mic"`.
 

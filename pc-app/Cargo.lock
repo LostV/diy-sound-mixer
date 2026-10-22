@@ -2094,6 +2094,7 @@ dependencies = [
  "log",
  "mixer-core",
  "windows",
+ "windows-core",
 ]
 
 [[package]]

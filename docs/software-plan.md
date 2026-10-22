@@ -157,4 +157,5 @@ Skannet på maskinen din (2026-10-22). Windows ser A50-en som:
 
 - [x] Fase 0: repo, Cargo workspace, Tauri-app
 - [x] Fase 1: lydmotor (lag 1). Kanaler, regler, volum og mute per kanal, mic med valg av enhet, nivåmålere og testvindu. Testet med enhetstester og en skanning av maskinen som bare leser.
+- [x] Nivåmålere per app via **process loopback**. Windows' egne sesjonsmålere viste hele A50 Game-enhetens nivå for alle aktive apper, så Discord beveget seg med musikken i Chrome. Nå måles hver apps egen lyd. Faller tilbake til Windows-måleren hvis loopback ikke er tilgjengelig. Verifisert live: Discord 0,00, Chrome 0,17–0,38.
 - [x] Fase 2: tray-ikon (åpne, simulator, autostart, avslutt), lukk = skjul til tray, én instans, autostart med `--minimized`, protokoll v1 ([protocol/README.md](../protocol/README.md)) og device hub (`mixer-devices`), simulatorvindu med skjerm, knotter, mute-knapper med LED og protokoll-logg. Simulatoren og hovedvinduet er testet i nettleser med simulert IPC. Hele appen er ikke kjørt ennå.
