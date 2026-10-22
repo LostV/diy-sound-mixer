@@ -47,6 +47,23 @@ ChannelView views[panel::kSlots];
 lv_obj_t* status_dot;
 lv_obj_t* status_label;
 lv_obj_t* waiting;
+bool is_connected = false;
+
+/// The screen's own texts; channel names and subtitles come from the PC.
+struct Texts {
+    const char* mute;
+    const char* muted;
+    const char* no_device;
+    const char* connected;
+    const char* disconnected;
+    const char* waiting;
+};
+
+constexpr Texts kEnglish{"Mute", "Muted", "No device", "Connected", "Disconnected",
+                         "Waiting for the PC app \xE2\x80\xA6"};
+constexpr Texts kNorwegian{"Mute", "Mutet", "Ingen enhet", "Tilkoblet", "Frakoblet",
+                           "Venter p\xC3\xA5 PC-appen \xE2\x80\xA6"};
+const Texts* texts = &kEnglish;
 TouchMuteFn touch_mute = nullptr;
 
 lv_obj_t* plain(lv_obj_t* parent) {
@@ -200,7 +217,7 @@ ChannelView build_channel(lv_obj_t* screen, int slot) {
     lv_obj_set_style_border_width(v.mute, 1, 0);
     lv_obj_remove_flag(v.mute, LV_OBJ_FLAG_CLICKABLE);
     v.mute_label = label(v.mute, &inter_16, kText);
-    lv_label_set_text(v.mute_label, "Mute");
+    lv_label_set_text(v.mute_label, texts->mute);
     lv_obj_center(v.mute_label);
 
     v.sub = label(v.card, &inter_14, kText, 155);
@@ -237,14 +254,14 @@ void show_channel(ChannelView& v, const panel::Channel& ch) {
     lv_obj_set_style_text_opa(v.value, ch.muted ? 115 : LV_OPA_COVER, 0);
     lv_obj_align_to(v.value, v.arc, LV_ALIGN_CENTER, 0, 0);
 
-    lv_label_set_text(v.mute_label, ch.muted ? "Mutet" : "Mute");
+    lv_label_set_text(v.mute_label, ch.muted ? texts->muted : texts->mute);
     lv_obj_set_style_bg_color(v.mute, ch.muted ? kDanger : lv_color_white(), 0);
     lv_obj_set_style_bg_opa(v.mute, ch.muted ? 217 : 20, 0);
     lv_obj_set_style_shadow_color(v.mute, kDanger, 0);
     lv_obj_set_style_shadow_width(v.mute, ch.muted ? 18 : 0, 0);
     lv_obj_set_style_shadow_opa(v.mute, LV_OPA_40, 0);
 
-    lv_label_set_text(v.sub, ch.available ? ch.sub.c_str() : "Ingen enhet");
+    lv_label_set_text(v.sub, ch.available ? ch.sub.c_str() : texts->no_device);
     lv_obj_set_style_opa(v.card, ch.available ? LV_OPA_COVER : 140, 0);
 }
 
@@ -271,14 +288,15 @@ void init(TouchMuteFn on_touch_mute) {
     for (int i = 0; i < panel::kSlots; ++i) views[i] = build_channel(screen, i);
 
     waiting = label(screen, &inter_16, kText, 170);
-    lv_label_set_text(waiting, "Venter på PC-appen \xE2\x80\xA6");
+    lv_label_set_text(waiting, texts->waiting);
     lv_obj_center(waiting);
 
     set_connected(false);
 }
 
 void set_connected(bool connected) {
-    lv_label_set_text(status_label, connected ? "Tilkoblet" : "Frakoblet");
+    is_connected = connected;
+    lv_label_set_text(status_label, connected ? texts->connected : texts->disconnected);
     lv_obj_align(status_label, LV_ALIGN_TOP_RIGHT, -(kCardX + 4), 24);
     lv_obj_set_style_bg_color(status_dot, lv_color_hex(connected ? 0x34D399 : 0xF59E0B), 0);
     lv_obj_align_to(status_dot, status_label, LV_ALIGN_OUT_LEFT_MID, -8, 0);
@@ -289,6 +307,12 @@ void set_connected(bool connected) {
 }
 
 void apply(const panel::Model& model, const panel::Update& update) {
+    if (update.language) {
+        texts = model.norwegian ? &kNorwegian : &kEnglish;
+        lv_label_set_text(waiting, texts->waiting);
+        lv_obj_center(waiting);
+        set_connected(is_connected);
+    }
     bool any = false;
     for (int i = 0; i < panel::kSlots; ++i) {
         if (update.channels & (1 << i)) show_channel(views[i], model.channels[i]);

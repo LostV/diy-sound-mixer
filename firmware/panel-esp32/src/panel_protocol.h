@@ -26,6 +26,7 @@ struct Channel {
 
 struct Model {
     std::array<Channel, kSlots> channels;
+    bool norwegian = false;  // the screen's own texts; English until the PC says otherwise
     std::array<int, kSlots> meters{};  // 0..100, already dB scaled by the PC
 };
 
@@ -33,6 +34,7 @@ struct Model {
 struct Update {
     uint8_t channels = 0;  // bit i set: channel i changed
     bool meters = false;
+    bool language = false;
     std::vector<std::string> replies;  // lines to send back (e.g. hello)
 };
 

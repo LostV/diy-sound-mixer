@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="no">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -10,23 +10,23 @@
   </head>
 
   <body class="sim">
-    <div class="device" aria-label="Simulert mikser">
+    <div class="device" data-i18n-label="simDevice" aria-label="Simulated mixer">
       <div class="bezel">
-        <div id="screen" class="screen" aria-label="Skjerm 800×480"></div>
+        <div id="screen" class="screen" data-i18n-label="simScreen" aria-label="Screen 800×480"></div>
       </div>
       <div id="controls" class="controls"></div>
     </div>
 
     <section class="log-panel">
       <header>
-        <h2>Protokoll</h2>
-        <label><input id="log-meter" type="checkbox" /> Vis meter</label>
-        <button id="log-clear" type="button">Tøm</button>
+        <h2 data-i18n="protocol">Protocol</h2>
+        <label><input id="log-meter" type="checkbox" /> <span data-i18n="showMeter">Show meter</span></label>
+        <button id="log-clear" type="button" data-i18n="clear">Clear</button>
       </header>
       <ol id="log" class="log" aria-live="off"></ol>
-      <p class="hint">
-        Vri: musehjul eller dra opp/ned. Trykk på knotten eller skjermen = mute. Piltaster virker når knotten har fokus.
-        Alt går gjennom den samme protokollen som den ekte hardwaren.
+      <p class="hint" data-i18n="simHint">
+        Turn: mouse wheel or drag up/down. Click the knob or the screen to mute. Arrow keys work when a knob has focus.
+        Everything goes through the same protocol as the real hardware.
       </p>
     </section>
   </body>

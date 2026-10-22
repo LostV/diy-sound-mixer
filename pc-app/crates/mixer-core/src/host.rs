@@ -7,7 +7,7 @@ use std::{
 
 use crate::{
     backend::AudioBackend,
-    config::MixerConfig,
+    config::{Language, MixerConfig},
     mixer::{Assignment, Mixer},
     snapshot::MixerSnapshot,
 };
@@ -46,6 +46,9 @@ pub enum Command {
     SetChannelOutput {
         channel: String,
         device: Option<String>,
+    },
+    SetLanguage {
+        language: Language,
     },
     Shutdown,
 }
@@ -147,6 +150,7 @@ fn handle<B: AudioBackend>(mixer: &mut Mixer<B>, cmd: Command) {
         } => mixer.assign_app(&process_name, assignment),
         Command::SetCaptureDevice { name } => mixer.set_capture_device(name),
         Command::SetChannelOutput { channel, device } => mixer.set_channel_output(&channel, device),
+        Command::SetLanguage { language } => mixer.set_language(language),
         Command::Shutdown => {}
     }
 }

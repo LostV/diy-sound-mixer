@@ -2,6 +2,41 @@ use std::{fs, io, path::Path};
 
 use serde::{Deserialize, Serialize};
 
+/// UI language of the app and the screen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Language {
+    #[default]
+    En,
+    /// Norwegian (bokmål).
+    No,
+}
+
+impl Language {
+    pub const ALL: [Language; 2] = [Language::En, Language::No];
+
+    /// Norwegian for `nb`, `nn` and `no` locales (`nb-NO`, `nn_NO`, ...), English otherwise.
+    pub fn from_locale(locale: &str) -> Self {
+        let lang = locale.split(['-', '_']).next().unwrap_or("").to_ascii_lowercase();
+        match lang.as_str() {
+            "nb" | "nn" | "no" => Self::No,
+            _ => Self::En,
+        }
+    }
+
+    /// Name of a built-in channel, so default names follow the language.
+    fn channel_name(self, id: &str) -> Option<&'static str> {
+        Some(match (id, self) {
+            ("game", Self::En) => "Game",
+            ("game", Self::No) => "Spill",
+            ("media", _) => "Media",
+            ("chat", _) => "Chat",
+            ("mic", _) => "Mic",
+            _ => return None,
+        })
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum ChannelKind {
@@ -25,6 +60,20 @@ pub struct ChannelConfig {
     /// Only used by playback channels.
     #[serde(default)]
     pub output: Option<OutputDevice>,
+}
+
+impl ChannelConfig {
+    /// The name to show. A built-in channel that still has its default name
+    /// (in any language) follows `language`; a name the user chose is kept.
+    pub fn display_name(&self, language: Language) -> String {
+        let is_default = Language::ALL
+            .iter()
+            .any(|l| l.channel_name(&self.id) == Some(self.name.as_str()));
+        match language.channel_name(&self.id) {
+            Some(name) if is_default => name.into(),
+            _ => self.name.clone(),
+        }
+    }
 }
 
 /// A chosen output device. Found again by name if the id changes, see
@@ -90,6 +139,8 @@ pub struct MixerConfig {
     /// across restarts, so we must know to undo it when the user changes
     /// their mind, even after this app restarted.
     pub routed_processes: Vec<String>,
+    /// `None` until set; the app then picks one from the Windows language.
+    pub language: Option<Language>,
 }
 
 impl Default for MixerConfig {
@@ -130,6 +181,7 @@ impl Default for MixerConfig {
             volume_step: 2,
             capture_device: None,
             routed_processes: Vec::new(),
+            language: None,
         }
     }
 }
@@ -163,5 +215,44 @@ impl MixerConfig {
 
     pub fn channel_mut(&mut self, id: &str) -> Option<&mut ChannelConfig> {
         self.channels.iter_mut().find(|c| c.id == id)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn language_from_locale() {
+        assert_eq!(Language::from_locale("nb-NO"), Language::No);
+        assert_eq!(Language::from_locale("nn_NO"), Language::No);
+        assert_eq!(Language::from_locale("no"), Language::No);
+        assert_eq!(Language::from_locale("en-US"), Language::En);
+        assert_eq!(Language::from_locale("sv-SE"), Language::En);
+        assert_eq!(Language::from_locale(""), Language::En);
+    }
+
+    #[test]
+    fn default_channel_names_follow_language_custom_names_stay() {
+        let config = MixerConfig::default();
+        let game = config.channel("game").unwrap();
+        assert_eq!(game.display_name(Language::En), "Game");
+        assert_eq!(game.display_name(Language::No), "Spill");
+
+        let mut renamed = game.clone();
+        renamed.name = "Spillerom".into();
+        assert_eq!(renamed.display_name(Language::En), "Spillerom");
+
+        let mut custom = game.clone();
+        custom.id = "extra".into();
+        custom.name = "Game".into();
+        assert_eq!(custom.display_name(Language::No), "Game");
+    }
+
+    #[test]
+    fn old_config_without_language_still_loads() {
+        let config: MixerConfig = serde_json::from_str(r#"{"volumeStep":4}"#).unwrap();
+        assert_eq!(config.language, None);
+        assert_eq!(config.volume_step, 4);
     }
 }

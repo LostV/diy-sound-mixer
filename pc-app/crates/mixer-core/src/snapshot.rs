@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::config::ChannelKind;
+use crate::config::{ChannelKind, Language};
 
 /// Everything a UI (settings window, screen, simulator) needs to draw the mixer.
 #[derive(Debug, Clone, Serialize)]
@@ -18,6 +18,7 @@ pub struct MixerSnapshot {
     pub output_devices: Vec<String>,
     /// False when Windows refuses per-app output routing; the picker is then hidden.
     pub routing_supported: bool,
+    pub language: Language,
 }
 
 #[derive(Debug, Clone, Serialize)]

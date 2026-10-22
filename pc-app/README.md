@@ -12,8 +12,9 @@ Rust + Tauri 2. See [docs/software-plan.md](../docs/software-plan.md) for the ar
 
 ## Usage
 
-- **Apps:** shown as chips with an icon in each channel. Drag a chip to another channel, or to "Ikke styrt" ("not controlled"). Clicking a chip gives the same choices as a menu, and Enter or arrow keys work too. "auto" means the rules placed the app. Dragging it or choosing a channel locks it there; "Automatisk (regler)" ("Automatic (rules)") unlocks it.
+- **Apps:** shown as chips with an icon in each channel. Drag a chip to another channel, or to "Not controlled". Clicking a chip gives the same choices as a menu, and Enter or arrow keys work too. "auto" means the rules placed the app. Dragging it or choosing a channel locks it there; "Automatic (rules)" unlocks it.
 - **Output per channel:** the picker at the top of each channel card. Windows remembers the choice per program. If it ever needs undoing without this app: Settings → System → Sound → Volume mixer → "Reset".
+- **Language:** English or Norsk, in the picker at the top. The first start follows the Windows language. The tray menu and the screen switch too, and channels that still have their default name are renamed (Game/Spill).
 - **Tray:** the icon has a menu with Open mixer, Simulator, Start with Windows and Quit. A left click opens the mixer.
 - **Closing the window** only hides it; the app keeps running in the tray. Quit from the tray menu.
 - **Start with Windows** launches the app hidden in the tray (`--minimized`). Note: in `tauri dev`, the debug build's path is registered, so turn it off again after testing. Turn it on for real in the installed version.

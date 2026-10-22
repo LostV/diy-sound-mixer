@@ -41,6 +41,10 @@ Update handle_line(const std::string& line, Model& model) {
             model.meters[i] = values[i] | 0;
         }
         update.meters = true;
+    } else if (std::string(type) == "lang") {
+        model.norwegian = std::string(doc["v"] | "en") == "no";
+        update.language = true;
+        update.channels = (1 << kSlots) - 1;  // mute and "no device" texts
     }
     // "led" is for the knob board; a screen has nothing to do with it.
     return update;

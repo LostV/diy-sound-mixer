@@ -37,4 +37,5 @@ export interface MixerSnapshot {
   captureDevice: string | null;
   outputDevices: string[];
   routingSupported: boolean;
+  language: "en" | "no";
 }

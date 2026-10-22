@@ -4,6 +4,7 @@
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { type Language, language, setLanguage, tr } from "./i18n";
 
 const SLOTS = 4;
 const FIRMWARE = "sim-0.1.0";
@@ -25,7 +26,8 @@ type HostMessage =
   | { t: "hello?" }
   | { t: "led"; id: number; on: boolean }
   | ({ t: "ch"; i: number } & Channel)
-  | { t: "meter"; v: number[] };
+  | { t: "meter"; v: number[] }
+  | { t: "lang"; v: Language };
 
 const channels: (Channel | null)[] = Array(SLOTS).fill(null);
 const meters: number[] = Array(SLOTS).fill(0);
@@ -54,7 +56,7 @@ function receive(line: string) {
   try {
     message = JSON.parse(line);
   } catch {
-    log("in", `ugyldig: ${line}`);
+    log("in", `${tr().invalid}: ${line}`);
     return;
   }
   if (message.t !== "meter" || logMeter.checked) log("in", line);
@@ -77,13 +79,19 @@ function receive(line: string) {
       if (message.id < SLOTS) leds[message.id] = message.on;
       renderLeds();
       break;
+    case "lang":
+      // Like the panel: only the device's own texts change; names come in `ch`.
+      setLanguage(message.v);
+      translateControls();
+      for (let i = 0; i < SLOTS; i++) renderColumn(i);
+      break;
   }
 }
 
 function log(direction: "in" | "out", text: string) {
   const item = document.createElement("li");
   item.className = direction;
-  item.textContent = `${direction === "in" ? "PC → enhet" : "enhet → PC"}  ${text}`;
+  item.textContent = `${direction === "in" ? tr().logIn : tr().logOut}  ${text}`;
   logEl.prepend(item);
   while (logEl.childElementCount > LOG_LIMIT) logEl.lastElementChild!.remove();
 }
@@ -161,11 +169,11 @@ function renderColumn(i: number) {
   view.root.style.setProperty("--accent", ch.color);
   view.root.classList.toggle("muted", ch.mute);
   view.root.classList.toggle("unavailable", !ch.avail);
-  view.root.setAttribute("aria-label", `${ch.name} ${ch.vol} prosent${ch.mute ? ", mutet" : ""}. Trykk for mute.`);
+  view.root.setAttribute("aria-label", tr().columnAria(ch.name, ch.vol, ch.mute));
   setArc(view.ring, RING_RADIUS, ch.vol / 100);
   view.value.textContent = ch.avail ? (ch.mute ? "MUTE" : String(ch.vol)) : "–";
   view.name.textContent = ch.name;
-  view.sub.textContent = ch.avail ? ch.sub : "Ingen enhet";
+  view.sub.textContent = ch.avail ? ch.sub : tr().noDevice;
 }
 
 function renderMeters() {
@@ -176,6 +184,7 @@ function renderMeters() {
 
 interface KnobView {
   knob: HTMLElement;
+  button: HTMLElement;
   led: HTMLElement;
   angle: number;
 }
@@ -206,7 +215,6 @@ for (let i = 0; i < SLOTS; i++) {
   knob.className = "knob";
   knob.tabIndex = 0;
   knob.setAttribute("role", "slider");
-  knob.setAttribute("aria-label", `Knott ${i + 1}`);
   const cap = document.createElement("div");
   cap.className = "knob-cap";
   knob.append(cap);
@@ -267,7 +275,6 @@ for (let i = 0; i < SLOTS; i++) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "mute-key";
-  button.setAttribute("aria-label", `Mute-knapp ${i + 1}`);
   const led = document.createElement("span");
   led.className = "led";
   button.append(led);
@@ -285,7 +292,14 @@ for (let i = 0; i < SLOTS; i++) {
 
   slot.append(knob, button);
   controlsEl.append(slot);
-  knobs.push({ knob, led, angle: 0 });
+  knobs.push({ knob, button, led, angle: 0 });
+}
+
+function translateControls() {
+  knobs.forEach((view, i) => {
+    view.knob.setAttribute("aria-label", tr().knob(i + 1));
+    view.button.setAttribute("aria-label", tr().muteKey(i + 1));
+  });
 }
 
 function renderLeds() {
@@ -293,5 +307,8 @@ function renderLeds() {
 }
 
 // ---- start ----
+
+setLanguage(language());
+translateControls();
 
 listen<string[]>("sim-host", ({ payload }) => payload.forEach(receive)).then(sendHello);

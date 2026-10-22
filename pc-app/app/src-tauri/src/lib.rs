@@ -4,7 +4,8 @@ mod tray;
 use std::sync::{Arc, Mutex};
 
 use mixer_core::{
-    Assignment, AudioBackend, Command, MixerConfig, MixerHost, MixerSnapshot, NullBackend,
+    Assignment, AudioBackend, Command, Language, MixerConfig, MixerHost, MixerSnapshot,
+    NullBackend,
 };
 use mixer_devices::{DeviceHub, HostMessage};
 use tauri::{
@@ -54,6 +55,7 @@ fn publish(app: &AppHandle, devices: &Devices, links: &links::Links, snapshot: M
             links.send(&link, &messages);
         }
     }
+    tray::sync_language(app, snapshot.language);
     let _ = app.emit_to("main", "mixer-snapshot", snapshot);
 }
 
@@ -131,6 +133,12 @@ fn assign_app(host: State<Host>, process_name: String, assignment: String) {
         process_name,
         assignment: Assignment::parse(&assignment),
     });
+}
+
+/// `language` is `"en"` or `"no"`.
+#[tauri::command]
+fn set_language(host: State<Host>, language: Language) {
+    host.send(Command::SetLanguage { language });
 }
 
 #[tauri::command]
@@ -232,9 +240,13 @@ pub fn run() {
         ))
         .setup(|app| {
             let config_path = app.path().app_config_dir()?.join("config.json");
-            let config = MixerConfig::load(&config_path).unwrap_or_else(|e| {
+            let mut config = MixerConfig::load(&config_path).unwrap_or_else(|e| {
                 log::error!("loading {}: {e}; using defaults", config_path.display());
                 MixerConfig::default()
+            });
+            // First start: follow the Windows language until the user picks one.
+            let language = *config.language.get_or_insert_with(|| {
+                Language::from_locale(&sys_locale::get_locale().unwrap_or_default())
             });
 
             let devices = Devices::default();
@@ -248,7 +260,7 @@ pub fn run() {
             app.manage(Host(Mutex::new(Some(host))));
             links::listen(app.handle().clone(), links);
 
-            tray::build(app.handle())?;
+            tray::build(app.handle(), language)?;
             // The autostart entry stores the exe path; rewrite it so it
             // follows the installed app rather than an old dev build.
             #[cfg(not(debug_assertions))]
@@ -285,6 +297,7 @@ pub fn run() {
             assign_app,
             set_capture_device,
             set_channel_output,
+            set_language,
             app_icon,
             get_autostart,
             set_autostart,

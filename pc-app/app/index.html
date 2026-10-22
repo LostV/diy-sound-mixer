@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="no">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -22,11 +22,18 @@
         <label class="glass-pill switch">
           <input id="autostart" type="checkbox" role="switch" />
           <span class="track" aria-hidden="true"><span class="knob"></span></span>
-          Start med Windows
+          <span data-i18n="autostart">Start with Windows</span>
         </label>
         <label class="glass-pill select-pill">
-          <span class="sr-only">Bakgrunn</span>
-          <select id="backdrop" title="Vindusbakgrunn">
+          <span class="sr-only" data-i18n="language">Language</span>
+          <select id="language" data-i18n-title="language" title="Language">
+            <option value="en" lang="en">English</option>
+            <option value="no" lang="nb">Norsk</option>
+          </select>
+        </label>
+        <label class="glass-pill select-pill">
+          <span class="sr-only" data-i18n="backdrop">Background</span>
+          <select id="backdrop" data-i18n-title="backdropTitle" title="Window background">
             <option value="acrylic">Acrylic</option>
             <option value="mica">Mica</option>
             <option value="none">Aurora</option>
@@ -34,10 +41,10 @@
         </label>
         <button id="open-simulator" class="glass-pill strong" type="button">Simulator</button>
         <div class="window-buttons">
-          <button id="win-min" class="win-btn" type="button" aria-label="Minimer">
+          <button id="win-min" class="win-btn" type="button" data-i18n-label="minimize" aria-label="Minimize">
             <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 5h8" /></svg>
           </button>
-          <button id="win-close" class="win-btn close" type="button" aria-label="Lukk til systemstatusfeltet">
+          <button id="win-close" class="win-btn close" type="button" data-i18n-label="closeToTray" aria-label="Close to the system tray">
             <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7" /></svg>
           </button>
         </div>
@@ -45,25 +52,25 @@
     </header>
 
     <main>
-      <section id="channels" class="channels" aria-label="Kanaler"></section>
+      <section id="channels" class="channels" data-i18n-label="channels" aria-label="Channels"></section>
 
       <section class="glass lane" aria-labelledby="uncontrolled-title">
         <div class="lane-head">
-          <h2 id="uncontrolled-title">Ikke styrt</h2>
-          <p class="hint">Dra en app hit for å la den være i fred · klikk på en app for flere valg</p>
+          <h2 id="uncontrolled-title" data-i18n="uncontrolled">Not controlled</h2>
+          <p class="hint" data-i18n="uncontrolledHint">Drag an app here to leave it alone · click an app for more options</p>
         </div>
         <div id="uncontrolled" class="dropzone chips" data-target="none"></div>
       </section>
 
       <details class="glass details">
-        <summary>Detaljer</summary>
+        <summary data-i18n="details">Details</summary>
         <table>
           <thead>
             <tr>
-              <th>App</th>
-              <th>Prosess</th>
-              <th>Spiller på</th>
-              <th>Plassert</th>
+              <th data-i18n="colApp">App</th>
+              <th data-i18n="colProcess">Process</th>
+              <th data-i18n="colPlaysOn">Plays on</th>
+              <th data-i18n="colPlaced">Placed</th>
             </tr>
           </thead>
           <tbody id="session-rows"></tbody>

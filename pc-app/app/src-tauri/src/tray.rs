@@ -1,3 +1,6 @@
+use std::sync::Mutex;
+
+use mixer_core::Language;
 use tauri::{
     AppHandle, Manager, Wry,
     menu::{CheckMenuItem, Menu, MenuItem, PredefinedMenuItem},
@@ -5,23 +8,38 @@ use tauri::{
 };
 use tauri_plugin_autostart::ManagerExt;
 
-/// Kept so the check mark follows changes made from the settings window.
-struct AutostartItem(CheckMenuItem<Wry>);
+/// Kept so the check mark follows changes made from the settings window,
+/// and the texts follow the language.
+struct TrayItems {
+    open: MenuItem<Wry>,
+    autostart: CheckMenuItem<Wry>,
+    quit: MenuItem<Wry>,
+    language: Mutex<Language>,
+}
 
-pub fn build(app: &AppHandle) -> tauri::Result<()> {
+/// Open, Start with Windows, Quit.
+fn texts(language: Language) -> [&'static str; 3] {
+    match language {
+        Language::En => ["Open mixer", "Start with Windows", "Quit"],
+        Language::No => ["Åpne mikser", "Start med Windows", "Avslutt"],
+    }
+}
+
+pub fn build(app: &AppHandle, language: Language) -> tauri::Result<()> {
     let autostart_on = app.autolaunch().is_enabled().unwrap_or(false);
+    let [open_text, autostart_text, quit_text] = texts(language);
 
-    let open = MenuItem::with_id(app, "open", "Åpne mikser", true, None::<&str>)?;
+    let open = MenuItem::with_id(app, "open", open_text, true, None::<&str>)?;
     let simulator = MenuItem::with_id(app, "simulator", "Simulator", true, None::<&str>)?;
     let autostart = CheckMenuItem::with_id(
         app,
         "autostart",
-        "Start med Windows",
+        autostart_text,
         true,
         autostart_on,
         None::<&str>,
     )?;
-    let quit = MenuItem::with_id(app, "quit", "Avslutt", true, None::<&str>)?;
+    let quit = MenuItem::with_id(app, "quit", quit_text, true, None::<&str>)?;
     let menu = Menu::with_items(
         app,
         &[
@@ -33,7 +51,12 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
             &quit,
         ],
     )?;
-    app.manage(AutostartItem(autostart));
+    app.manage(TrayItems {
+        open,
+        autostart,
+        quit,
+        language: Mutex::new(language),
+    });
 
     TrayIconBuilder::with_id("main")
         // The flat 32 px icon: Windows scales it to 16-24 px for the tray,
@@ -70,7 +93,23 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
 
 /// Updates the tray check mark to match the real autostart state.
 pub fn sync_autostart(app: &AppHandle, enabled: bool) {
-    if let Some(item) = app.try_state::<AutostartItem>() {
-        let _ = item.0.set_checked(enabled);
+    if let Some(items) = app.try_state::<TrayItems>() {
+        let _ = items.autostart.set_checked(enabled);
     }
+}
+
+/// Retranslates the menu; cheap to call with every snapshot.
+pub fn sync_language(app: &AppHandle, language: Language) {
+    let Some(items) = app.try_state::<TrayItems>() else {
+        return;
+    };
+    let mut current = items.language.lock().expect("tray language lock");
+    if *current == language {
+        return;
+    }
+    *current = language;
+    let [open, autostart, quit] = texts(language);
+    let _ = items.open.set_text(open);
+    let _ = items.autostart.set_text(autostart);
+    let _ = items.quit.set_text(quit);
 }

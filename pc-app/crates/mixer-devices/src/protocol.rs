@@ -1,5 +1,6 @@
 //! One JSON object per line. See `protocol/README.md` for the full spec.
 
+use mixer_core::Language;
 use serde::{Deserialize, Serialize};
 
 /// Bumped on breaking changes; devices report theirs in `hello`.
@@ -76,6 +77,9 @@ pub enum HostMessage {
     /// Meter levels per channel slot, 0..=100, already on a dB scale so the
     /// device can draw them directly.
     Meter { v: Vec<u8> },
+    /// UI language for the device's own texts (`en` or `no`). Sent before
+    /// the channels and again when it changes. Devices default to English.
+    Lang { v: Language },
 }
 
 impl DeviceMessage {
@@ -133,6 +137,10 @@ mod tests {
         assert_eq!(
             HostMessage::Meter { v: vec![0, 50] }.to_line(),
             r#"{"t":"meter","v":[0,50]}"#
+        );
+        assert_eq!(
+            HostMessage::Lang { v: Language::No }.to_line(),
+            r#"{"t":"lang","v":"no"}"#
         );
     }
 }

@@ -15,7 +15,7 @@ The protocol between the PC app and the mixer hardware: the Pico 2 (knobs), the 
 
 1. The PC opens the port and sends `{"t":"hello?"}`.
 2. The device answers with `hello`. It should also send `hello` on its own at boot.
-3. The PC then sends the full state (all `ch` and `led`). After that it only sends changes, plus `meter`.
+3. The PC then sends the full state (`lang`, all `ch` and `led`). After that it only sends changes, plus `meter`.
 4. A new `hello` from the device (after a reboot, for example) means "send me everything again".
 
 ## Device → PC
@@ -35,6 +35,7 @@ The protocol between the PC app and the mixer hardware: the Pico 2 (knobs), the 
 | `{"t":"ch","i":0,"name":"Spill","vol":72,"mute":false,"color":"#30A46C","sub":"Counter-Strike 2","avail":true}` | panel, sim | Full state of column `i`, sent when anything in it changes. `sub` is a short subtitle (apps, or the mic name). `avail:false` means there is nothing to control, e.g. no microphone. |
 | `{"t":"meter","v":[80,55,0,35]}` | panel, sim | Meter level per column, 0–100, **already on a dB scale** (−60..0 dB). It can be drawn directly. Sent about 30 times a second. Muted channels are 0. |
 | `{"t":"led","id":2,"on":true}` | knobs, sim | Mute LED for channel `id`. |
+| `{"t":"lang","v":"no"}` | panel, sim | Language for the device's own texts (`en` or `no`): mute labels, connection status and so on. Sent before the channels and again when the user switches. Until it arrives, devices use English. Channel names come translated in `ch`. |
 
 ## Slots
 

@@ -2,7 +2,7 @@ use std::collections::{BTreeSet, HashMap};
 
 use crate::{
     backend::{AudioBackend, CaptureInfo, DeviceInfo, SessionInfo},
-    config::{AppRule, ChannelKind, MixerConfig, OutputDevice, RuleMatch},
+    config::{AppRule, ChannelKind, Language, MixerConfig, OutputDevice, RuleMatch},
     devices::find_device,
     rules::{self, normalize_process_name},
     snapshot::{ChannelSnapshot, MixerSnapshot, SessionSnapshot},
@@ -379,7 +379,19 @@ impl<B: AudioBackend> Mixer<B> {
         }
     }
 
+    pub fn language(&self) -> Language {
+        self.config.language.unwrap_or_default()
+    }
+
+    pub fn set_language(&mut self, language: Language) {
+        if self.config.language != Some(language) {
+            self.config.language = Some(language);
+            self.dirty = true;
+        }
+    }
+
     pub fn snapshot(&self) -> MixerSnapshot {
+        let language = self.language();
         let channels = self
             .config
             .channels
@@ -406,7 +418,7 @@ impl<B: AudioBackend> Mixer<B> {
                 };
                 ChannelSnapshot {
                     id: c.id.clone(),
-                    name: c.name.clone(),
+                    name: c.display_name(language),
                     color: c.color.clone(),
                     kind: c.kind,
                     volume: c.volume,
@@ -450,6 +462,7 @@ impl<B: AudioBackend> Mixer<B> {
             capture_device: self.config.capture_device.clone(),
             output_devices: self.output_devices.iter().map(|d| d.name.clone()).collect(),
             routing_supported: self.routing_supported,
+            language,
         }
     }
 

@@ -143,7 +143,7 @@ int main(int argc, char** argv) {
     lv_init();
     lv_tick_set_cb(ticks);
     lv_display_t* display = lv_sdl_window_create(800, 480);
-    lv_sdl_window_set_title(display, "Skjerm-simulator - DIY Sound Mixer");
+    lv_sdl_window_set_title(display, "Screen simulator - DIY Sound Mixer");
     lv_sdl_mouse_create();
 
     ui::init(on_touch_mute);

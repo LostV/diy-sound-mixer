@@ -10,7 +10,9 @@ pub mod rules;
 pub mod snapshot;
 
 pub use backend::{AudioBackend, CaptureInfo, DeviceInfo, NullBackend, SessionInfo};
-pub use config::{AppRule, ChannelConfig, ChannelKind, MixerConfig, OutputDevice, RuleMatch};
+pub use config::{
+    AppRule, ChannelConfig, ChannelKind, Language, MixerConfig, OutputDevice, RuleMatch,
+};
 pub use host::{Command, MixerHost};
 pub use mixer::{Assignment, Mixer};
 pub use snapshot::{ChannelSnapshot, MixerSnapshot, SessionSnapshot};

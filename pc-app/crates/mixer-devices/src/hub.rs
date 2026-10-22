@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use mixer_core::{ChannelSnapshot, Command, MixerSnapshot};
+use mixer_core::{ChannelSnapshot, Command, Language, MixerSnapshot};
 
 use crate::protocol::{DeviceKind, DeviceMessage, HostMessage};
 
@@ -17,6 +17,7 @@ struct Link {
     /// Last `ch` sent per slot, to only send changes.
     sent_ch: Vec<Option<HostMessage>>,
     sent_led: Vec<Option<bool>>,
+    sent_lang: Option<Language>,
 }
 
 /// Translates between devices and the mixer. Knob `i` and screen column `i`
@@ -119,6 +120,12 @@ impl DeviceHub {
             link.sent_led.resize(channels.len(), None);
             let mut messages = Vec::new();
 
+            if kind.has_screen() && link.sent_lang != Some(snapshot.language) {
+                link.sent_lang = Some(snapshot.language);
+                messages.push(HostMessage::Lang {
+                    v: snapshot.language,
+                });
+            }
             for (i, channel) in channels.iter().enumerate() {
                 if kind.has_screen() {
                     let ch = channel_message(i, channel);
@@ -211,6 +218,7 @@ mod tests {
             capture_device: None,
             output_devices: Vec::new(),
             routing_supported: false,
+            language: Language::En,
         }
     }
 
@@ -333,7 +341,25 @@ mod tests {
             channel("game", 50, false),
             channel("chat", 80, false),
         ]));
-        assert_eq!(out[0].1.len(), 3);
+        // lang, two channels, meter
+        assert_eq!(out[0].1.len(), 4);
+    }
+
+    #[test]
+    fn screens_get_language_first_and_on_change() {
+        let mut hub = DeviceHub::new();
+        hub.connect("x");
+        hub.handle_line("x", r#"{"t":"hello","dev":"panel","fw":"test"}"#);
+        let mut snap = snapshot(vec![channel("game", 50, false)]);
+        let first = hub.update(&snap);
+        assert_eq!(first[0].1[0], HostMessage::Lang { v: Language::En });
+
+        let again = hub.update(&snap);
+        assert!(!again[0].1.iter().any(|m| matches!(m, HostMessage::Lang { .. })));
+
+        snap.language = Language::No;
+        let changed = hub.update(&snap);
+        assert_eq!(changed[0].1[0], HostMessage::Lang { v: Language::No });
     }
 
     #[test]
