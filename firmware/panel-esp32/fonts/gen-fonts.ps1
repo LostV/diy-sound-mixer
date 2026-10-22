@@ -34,6 +34,12 @@ try {
         & $conv --font $src -r $f.range --size $f.size --bpp 4 --format lvgl --no-compress `
             --lv-include "lvgl.h" --lv-font-name $f.name -o $dst
         if ($LASTEXITCODE -ne 0) { throw "lv_font_conv failed for $($f.name)" }
+        # lv_font_conv copies its command line into the header; strip the
+        # local folders so no user paths end up in the repo.
+        $c = [IO.File]::ReadAllText($dst) `
+            -replace '--font \S*[\\/](inter-latin-\S+)', '--font $1' `
+            -replace '-o \S*[\\/](\S+\.c)', '-o $1'
+        [IO.File]::WriteAllText($dst, $c)
         Write-Host "wrote $dst"
     }
     Copy-Item (Join-Path $Tools "node_modules/@fontsource/inter/LICENSE") (Join-Path $out "OFL.txt") -Force
