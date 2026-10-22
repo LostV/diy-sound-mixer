@@ -36,11 +36,9 @@ pub fn build(app: &AppHandle) -> tauri::Result<()> {
     app.manage(AutostartItem(autostart));
 
     TrayIconBuilder::with_id("main")
-        .icon(
-            app.default_window_icon()
-                .expect("bundle has an icon")
-                .clone(),
-        )
+        // The flat 32 px icon: Windows scales it to 16-24 px for the tray,
+        // where the glass window icon turns to mush.
+        .icon(tauri::include_image!("icons/32x32.png"))
         .tooltip("DIY Sound Mixer")
         .menu(&menu)
         .show_menu_on_left_click(false)

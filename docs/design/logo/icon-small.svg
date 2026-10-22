@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DIY Sound Mixer – small icon (16–32 px: taskbar, tray, title bar)
+
+  Same emblem as emblem.svg, redrawn on a 32 px grid so edges land on pixels:
+    track width 4 (r 2), knob r 4, gap around knob 1, bar pitch 8.
+  Flat colors so it stays bold next to other taskbar icons; the glass
+  version (icon-transparent.png) is for 48 px and up.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="track" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#A69D92"/>
+      <stop offset="1" stop-color="#7C746A"/>
+    </linearGradient>
+    <linearGradient id="knob" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F7C25A"/>
+      <stop offset="1" stop-color="#D99428"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#track)">
+    <path d="M2 10 A2 2 0 0 1 6 10 L6 14.417 A5 5 0 0 0 2 14.417 Z"/>
+    <path d="M2 23.583 A5 5 0 0 0 6 23.583 L6 29 A2 2 0 0 1 2 29 Z"/>
+    <path d="M10 3 A2 2 0 0 1 14 3 L14 6.417 A5 5 0 0 0 10 6.417 Z"/>
+    <path d="M10 15.583 A5 5 0 0 0 14 15.583 L14 29 A2 2 0 0 1 10 29 Z"/>
+    <path d="M18 14 A2 2 0 0 1 22 14 L22 17.417 A5 5 0 0 0 18 17.417 Z"/>
+    <path d="M18 26.583 A5 5 0 0 0 22 26.583 L22 29 A2 2 0 0 1 18 29 Z"/>
+    <path d="M26 8 A2 2 0 0 1 30 8 L30 12.417 A5 5 0 0 0 26 12.417 Z"/>
+    <path d="M26 21.583 A5 5 0 0 0 30 21.583 L30 29 A2 2 0 0 1 26 29 Z"/>
+  </g>
+  <g fill="url(#knob)">
+    <circle cx="4" cy="19" r="4"/>
+    <circle cx="12" cy="11" r="4"/>
+    <circle cx="20" cy="22" r="4"/>
+    <circle cx="28" cy="17" r="4"/>
+  </g>
+</svg>
