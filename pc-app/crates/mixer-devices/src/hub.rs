@@ -197,6 +197,8 @@ mod tests {
             peak: 1.0,
             available: true,
             apps: vec!["Discord".into()],
+            output: None,
+            output_available: true,
         }
     }
 
@@ -207,6 +209,8 @@ mod tests {
             sessions_version: 0,
             capture_devices: Vec::new(),
             capture_device: None,
+            output_devices: Vec::new(),
+            routing_supported: false,
         }
     }
 

@@ -65,6 +65,11 @@ button:hover {
   background: #383b41;
 }
 
+:focus-visible {
+  outline: 2px solid #7c8cff;
+  outline-offset: 2px;
+}
+
 .header-controls {
   display: flex;
   flex-wrap: wrap;
@@ -73,12 +78,17 @@ button:hover {
   gap: 16px;
 }
 
-.mic-picker,
 .toggle {
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--text-dim);
+}
+
+.hint {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.85rem;
 }
 
 /* Channels */
@@ -100,6 +110,18 @@ button:hover {
   border-top: 4px solid var(--accent);
 }
 
+.channel .device {
+  width: 100%;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  text-overflow: ellipsis;
+}
+
+.channel .device.missing {
+  color: #f5a524;
+  border-color: #6b5420;
+}
+
 .channel .value {
   font-size: 1.9rem;
   font-variant-numeric: tabular-nums;
@@ -109,7 +131,7 @@ button:hover {
 .channel .body {
   display: flex;
   gap: 12px;
-  height: 200px;
+  height: 180px;
 }
 
 .slider {
@@ -168,30 +190,190 @@ button:hover {
   opacity: 0.6;
 }
 
-.apps {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* Drop zones and app chips */
+
+.dropzone {
   width: 100%;
-  min-height: 3.6em;
-  color: var(--text-dim);
-  font-size: 0.85rem;
-  text-align: center;
+  border: 1.5px dashed transparent;
+  border-radius: 8px;
+  transition:
+    background 120ms,
+    border-color 120ms;
 }
 
-.apps li {
+.dropzone.over {
+  background: color-mix(in srgb, var(--accent, #7c8cff) 14%, transparent);
+  border-color: var(--accent, #7c8cff);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 6px;
+  min-height: 88px;
+  padding: 6px;
+  background: #1f2124;
+}
+
+.channel .chips {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.chips .empty {
+  margin: auto;
+  color: #5d6068;
+  font-size: 0.85rem;
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 5px 9px 5px 5px;
+  background: var(--panel-2);
+  border: 1px solid #3c3f45;
+  border-left: 3px solid var(--accent, #5d6068);
+  border-radius: 7px;
+  cursor: grab;
+  user-select: none;
+}
+
+.chip:hover {
+  background: #383b41;
+}
+
+.chip.lifted {
+  opacity: 0.4;
+}
+
+.chip-icon {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: var(--accent, #5d6068);
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.chip-icon.has-image {
+  background: none;
+}
+
+.chip-icon img {
+  width: 24px;
+  height: 24px;
+}
+
+.chip-name {
   overflow: hidden;
+  font-size: 0.88rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Sessions */
+.chip-badge {
+  margin-left: auto;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #34373d;
+  color: var(--text-dim);
+  font-size: 0.7rem;
+}
 
-.sessions {
-  margin-top: 26px;
-  padding: 16px;
+/* "Ikke styrt" lane */
+
+.lane {
+  margin-top: 18px;
+  padding: 14px 16px;
   background: var(--panel);
   border-radius: var(--radius);
+}
+
+.lane-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 16px;
+  margin-bottom: 10px;
+}
+
+.lane .chips {
+  min-height: 48px;
+}
+
+.lane .chip {
+  max-width: 220px;
+}
+
+/* Chip menu */
+
+.chip-menu {
+  position: fixed;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  padding: 6px;
+  background: #2b2d32;
+  border: 1px solid #44474e;
+  border-radius: 9px;
+  box-shadow: 0 12px 28px rgb(0 0 0 / 45%);
+}
+
+.chip-menu[hidden] {
+  display: none;
+}
+
+.menu-title {
+  padding: 4px 8px 6px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  text-align: left;
+}
+
+.menu-item::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent, transparent);
+  border: 1px solid var(--accent, #5d6068);
+}
+
+.menu-item[aria-checked="true"] {
+  background: #3a3d44;
+  font-weight: 600;
+}
+
+/* Details */
+
+.details {
+  margin-top: 18px;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-radius: var(--radius);
+}
+
+.details summary {
+  cursor: pointer;
+  color: var(--text-dim);
 }
 
 table {
@@ -219,10 +401,4 @@ td.app {
 
 .muted-text {
   color: var(--text-dim);
-}
-
-.hint {
-  margin: 12px 0 0;
-  color: var(--text-dim);
-  font-size: 0.85rem;
 }

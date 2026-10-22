@@ -14,6 +14,10 @@ pub struct MixerSnapshot {
     /// All microphones, and the configured preference (`None` = Windows default).
     pub capture_devices: Vec<String>,
     pub capture_device: Option<String>,
+    /// Names of all active output devices, for the per-channel output picker.
+    pub output_devices: Vec<String>,
+    /// False when Windows refuses per-app output routing; the picker is then hidden.
+    pub routing_supported: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -31,6 +35,10 @@ pub struct ChannelSnapshot {
     pub available: bool,
     /// Display names of the apps currently in the channel (or the mic name).
     pub apps: Vec<String>,
+    /// Chosen output device name; `None` = Windows default. Playback only.
+    pub output: Option<String>,
+    /// False when the chosen output is not connected right now.
+    pub output_available: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]

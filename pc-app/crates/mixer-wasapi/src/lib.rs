@@ -3,12 +3,14 @@
 
 #![cfg(windows)]
 
+mod icon;
 mod loopback;
+mod policy;
 mod process;
 
 use std::collections::{HashMap, HashSet};
 
-use mixer_core::{AudioBackend, CaptureInfo, SessionInfo};
+use mixer_core::{AudioBackend, CaptureInfo, DeviceInfo, SessionInfo};
 use windows::{
     Win32::{
         Devices::FunctionDiscovery::PKEY_Device_FriendlyName,
@@ -27,7 +29,8 @@ use windows::{
     core::{Interface, PWSTR, Result},
 };
 
-use crate::{loopback::ProcessMeter, process::ProcessCache};
+pub use crate::icon::icon_png;
+use crate::{loopback::ProcessMeter, policy::PolicyConfig, process::ProcessCache};
 
 struct Session {
     pid: u32,
@@ -63,6 +66,8 @@ pub struct WasapiBackend {
     capture: Option<(String, Capture)>,
     /// Per-process level meters, keyed by pid.
     meters: HashMap<u32, Meter>,
+    /// `None` when this Windows has no per-app routing we recognise.
+    policy: Option<PolicyConfig>,
     processes: ProcessCache,
     com_initialized: bool,
 }
@@ -79,6 +84,7 @@ impl WasapiBackend {
             sessions: HashMap::new(),
             capture: None,
             meters: HashMap::new(),
+            policy: PolicyConfig::new(),
             processes: ProcessCache::default(),
             com_initialized,
         })
@@ -164,6 +170,12 @@ impl WasapiBackend {
             });
         }
         Ok(())
+    }
+
+    /// The output Windows has stored for `pid` (a device interface path), for
+    /// diagnostics.
+    pub fn app_output(&self, pid: u32) -> Option<String> {
+        self.policy.as_ref()?.app_output(pid).ok().flatten()
     }
 
     /// Starts a loopback meter for every process with an active session and
@@ -292,6 +304,36 @@ impl AudioBackend for WasapiBackend {
         }
     }
 
+    fn output_devices(&mut self) -> Vec<DeviceInfo> {
+        let mut devices: Vec<DeviceInfo> = self
+            .devices
+            .iter()
+            .map(|(id, d)| DeviceInfo {
+                id: id.clone(),
+                name: d.name.clone(),
+            })
+            .collect();
+        devices.sort_by(|a, b| a.name.cmp(&b.name));
+        devices
+    }
+
+    fn routing_supported(&mut self) -> bool {
+        self.policy.is_some()
+    }
+
+    fn set_app_output(&mut self, pid: u32, device_id: Option<&str>) -> bool {
+        let Some(policy) = &self.policy else {
+            return false;
+        };
+        match policy.set_app_output(pid, device_id) {
+            Ok(()) => true,
+            Err(e) => {
+                log::warn!("set output for pid {pid}: {e}");
+                false
+            }
+        }
+    }
+
     fn scan_capture(&mut self, preferred: Option<&str>) -> Option<CaptureInfo> {
         match self.open_capture(preferred) {
             Ok(info) => Some(info),
@@ -337,6 +379,7 @@ impl AudioBackend for WasapiBackend {
 
 impl Drop for WasapiBackend {
     fn drop(&mut self) {
+        self.policy = None;
         self.meters.clear();
         self.sessions.clear();
         self.devices.clear();

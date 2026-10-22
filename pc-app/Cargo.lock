@@ -806,6 +806,7 @@ dependencies = [
 name = "diy-sound-mixer"
 version = "0.1.0"
 dependencies = [
+ "base64 0.22.1",
  "log",
  "mixer-core",
  "mixer-devices",
@@ -2093,8 +2094,10 @@ version = "0.1.0"
 dependencies = [
  "log",
  "mixer-core",
+ "png",
  "windows",
  "windows-core",
+ "windows-link",
 ]
 
 [[package]]

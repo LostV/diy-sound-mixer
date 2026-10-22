@@ -1,8 +1,9 @@
 use std::collections::{BTreeSet, HashMap};
 
 use crate::{
-    backend::{AudioBackend, CaptureInfo, SessionInfo},
-    config::{AppRule, ChannelKind, MixerConfig, RuleMatch},
+    backend::{AudioBackend, CaptureInfo, DeviceInfo, SessionInfo},
+    config::{AppRule, ChannelKind, MixerConfig, OutputDevice, RuleMatch},
+    devices::find_device,
     rules::{self, normalize_process_name},
     snapshot::{ChannelSnapshot, MixerSnapshot, SessionSnapshot},
 };
@@ -31,6 +32,18 @@ impl Assignment {
 struct Tracked {
     info: SessionInfo,
     channel: Option<String>,
+    /// Output device id we sent this session's process to, if any.
+    routed_to: Option<String>,
+}
+
+/// Where a session's audio should go.
+enum Route {
+    /// The Windows default; undo any routing of ours.
+    Default,
+    Device(String),
+    /// The chosen device is not connected: leave things as they are, so the
+    /// app snaps back when it returns. Windows plays to the default meanwhile.
+    Missing,
 }
 
 /// The mixer state machine. Single threaded; [`crate::MixerHost`] drives it.
@@ -46,6 +59,8 @@ pub struct Mixer<B: AudioBackend> {
     capture: Option<CaptureInfo>,
     capture_peak: f32,
     capture_devices: Vec<String>,
+    output_devices: Vec<DeviceInfo>,
+    routing_supported: bool,
     sessions_version: u64,
     dirty: bool,
 }
@@ -60,6 +75,8 @@ impl<B: AudioBackend> Mixer<B> {
             capture: None,
             capture_peak: 0.0,
             capture_devices: Vec::new(),
+            output_devices: Vec::new(),
+            routing_supported: false,
             sessions_version: 0,
             dirty: false,
         }
@@ -78,9 +95,13 @@ impl<B: AudioBackend> Mixer<B> {
         std::mem::take(&mut self.dirty)
     }
 
-    /// Picks up new and vanished sessions and re-reads the microphone.
+    /// Picks up new and vanished sessions, re-applies routing where needed
+    /// and re-reads the microphone.
     pub fn refresh(&mut self) {
         let scanned = self.backend.scan_sessions();
+        self.output_devices = self.backend.output_devices();
+        self.routing_supported = self.backend.routing_supported();
+        self.update_output_ids();
         let mut changed = false;
 
         let live: BTreeSet<&str> = scanned.iter().map(|s| s.id.as_str()).collect();
@@ -96,7 +117,14 @@ impl<B: AudioBackend> Mixer<B> {
             }
             let channel = self.resolve(&info);
             let id = info.id.clone();
-            self.sessions.insert(id.clone(), Tracked { info, channel });
+            self.sessions.insert(
+                id.clone(),
+                Tracked {
+                    info,
+                    channel,
+                    routed_to: None,
+                },
+            );
             self.apply_session(&id);
             changed = true;
         }
@@ -104,7 +132,110 @@ impl<B: AudioBackend> Mixer<B> {
         if changed {
             self.sessions_version += 1;
         }
+        // Cheap when nothing changed: only sessions whose target differs act.
+        self.apply_routing_all();
         self.refresh_capture();
+    }
+
+    /// Driver updates can give a device a new id; keep the stored one current.
+    fn update_output_ids(&mut self) {
+        for channel in &mut self.config.channels {
+            let Some(output) = &mut channel.output else {
+                continue;
+            };
+            if let Some(found) = find_device(&self.output_devices, output)
+                && output.id.as_deref() != Some(found.id.as_str())
+            {
+                output.id = Some(found.id.clone());
+                self.dirty = true;
+            }
+        }
+    }
+
+    /// Sends the channel's apps to `device` (by name), or back to the
+    /// Windows default with `None`.
+    pub fn set_channel_output(&mut self, channel_id: &str, device: Option<String>) {
+        let found_id = device
+            .as_deref()
+            .and_then(|name| self.output_devices.iter().find(|d| d.name == name))
+            .map(|d| d.id.clone());
+        let Some(channel) = self.config.channel_mut(channel_id) else {
+            return;
+        };
+        if channel.kind != ChannelKind::Playback {
+            return;
+        }
+        channel.output = device
+            .filter(|n| !n.trim().is_empty())
+            .map(|name| OutputDevice { name, id: found_id });
+        self.dirty = true;
+        self.apply_routing_all();
+    }
+
+    fn apply_routing_all(&mut self) {
+        let ids: Vec<String> = self.sessions.keys().cloned().collect();
+        for id in ids {
+            self.apply_routing(&id);
+        }
+    }
+
+    fn route_for(&self, tracked: &Tracked) -> Route {
+        let output = tracked
+            .channel
+            .as_deref()
+            .and_then(|id| self.config.channel(id))
+            .and_then(|c| c.output.as_ref());
+        match output {
+            None => Route::Default,
+            Some(wanted) => match find_device(&self.output_devices, wanted) {
+                Some(device) => Route::Device(device.id.clone()),
+                None => Route::Missing,
+            },
+        }
+    }
+
+    /// Makes Windows play the session's process where its channel wants.
+    /// Only calls the OS when the target actually changed.
+    fn apply_routing(&mut self, session_id: &str) {
+        if !self.routing_supported {
+            return;
+        }
+        let Some(tracked) = self.sessions.get(session_id) else {
+            return;
+        };
+        if tracked.info.pid == 0 || tracked.info.is_system_sounds {
+            return;
+        }
+        let route = self.route_for(tracked);
+        let pid = tracked.info.pid;
+        let process = normalize_process_name(&tracked.info.process_name);
+        let routed_before =
+            tracked.routed_to.is_some() || self.config.routed_processes.contains(&process);
+
+        let new_target = match route {
+            Route::Missing => return,
+            Route::Device(id) if tracked.routed_to.as_deref() == Some(id.as_str()) => return,
+            Route::Device(id) => Some(id),
+            Route::Default if !routed_before => return,
+            Route::Default => None,
+        };
+
+        if !self.backend.set_app_output(pid, new_target.as_deref()) {
+            log::warn!("routing {process} (pid {pid}) failed");
+        }
+        // Recorded even on failure so a refusing OS isn't asked twice a second.
+        let routed = new_target.is_some();
+        if let Some(tracked) = self.sessions.get_mut(session_id) {
+            tracked.routed_to = new_target;
+        }
+        let listed = self.config.routed_processes.contains(&process);
+        if routed && !listed {
+            self.config.routed_processes.push(process);
+            self.dirty = true;
+        } else if !routed && listed {
+            self.config.routed_processes.retain(|p| *p != process);
+            self.dirty = true;
+        }
     }
 
     fn refresh_capture(&mut self) {
@@ -241,6 +372,7 @@ impl<B: AudioBackend> Mixer<B> {
             tracked.channel = new_channel;
             changed = true;
             self.apply_session(&id);
+            self.apply_routing(&id);
         }
         if changed {
             self.sessions_version += 1;
@@ -282,6 +414,11 @@ impl<B: AudioBackend> Mixer<B> {
                     peak,
                     available,
                     apps,
+                    output: c.output.as_ref().map(|o| o.name.clone()),
+                    output_available: c
+                        .output
+                        .as_ref()
+                        .is_none_or(|o| find_device(&self.output_devices, o).is_some()),
                 }
             })
             .collect();
@@ -311,6 +448,8 @@ impl<B: AudioBackend> Mixer<B> {
             sessions_version: self.sessions_version,
             capture_devices: self.capture_devices.clone(),
             capture_device: self.config.capture_device.clone(),
+            output_devices: self.output_devices.iter().map(|d| d.name.clone()).collect(),
+            routing_supported: self.routing_supported,
         }
     }
 
@@ -382,6 +521,9 @@ mod tests {
         mutes: HashMap<String, bool>,
         capture: Option<CaptureInfo>,
         preferred_seen: Option<String>,
+        outputs: Vec<DeviceInfo>,
+        /// Every `set_app_output` call, in order.
+        routes: Vec<(u32, Option<String>)>,
     }
 
     impl AudioBackend for FakeBackend {
@@ -396,6 +538,16 @@ mod tests {
         }
         fn set_session_mute(&mut self, id: &str, muted: bool) {
             self.mutes.insert(id.into(), muted);
+        }
+        fn output_devices(&mut self) -> Vec<DeviceInfo> {
+            self.outputs.clone()
+        }
+        fn routing_supported(&mut self) -> bool {
+            true
+        }
+        fn set_app_output(&mut self, pid: u32, device_id: Option<&str>) -> bool {
+            self.routes.push((pid, device_id.map(str::to_string)));
+            true
         }
         fn scan_capture(&mut self, preferred: Option<&str>) -> Option<CaptureInfo> {
             self.preferred_seen = preferred.map(str::to_string);
@@ -562,6 +714,128 @@ mod tests {
 
         m.set_capture_device(Some("  ".into()));
         assert_eq!(m.config().capture_device, None);
+    }
+
+    fn output(id: &str, name: &str) -> DeviceInfo {
+        DeviceInfo {
+            id: id.into(),
+            name: name.into(),
+        }
+    }
+
+    fn routed_mixer() -> Mixer<FakeBackend> {
+        let mut discord = session("d", "discord.exe");
+        discord.pid = 42;
+        let mut m = mixer_with(vec![discord]);
+        m.backend_mut().outputs = vec![
+            output("game-id", "Headphones (A50 Game)"),
+            output("voice-id", "Headset Earphone (A50 Voice)"),
+        ];
+        m.refresh();
+        m
+    }
+
+    #[test]
+    fn nothing_is_routed_until_a_channel_has_an_output() {
+        let mut m = routed_mixer();
+        assert!(m.backend_mut().routes.is_empty());
+    }
+
+    #[test]
+    fn channel_output_routes_its_apps_once() {
+        let mut m = routed_mixer();
+        m.set_channel_output("chat", Some("Headset Earphone (A50 Voice)".into()));
+        m.refresh();
+        m.refresh();
+        assert_eq!(
+            m.backend_mut().routes,
+            vec![(42, Some("voice-id".to_string()))]
+        );
+        assert_eq!(m.config().routed_processes, vec!["discord.exe".to_string()]);
+        let chat = m
+            .snapshot()
+            .channels
+            .into_iter()
+            .find(|c| c.id == "chat")
+            .unwrap();
+        assert_eq!(chat.output.as_deref(), Some("Headset Earphone (A50 Voice)"));
+        assert!(chat.output_available);
+    }
+
+    #[test]
+    fn back_to_default_undoes_routing() {
+        let mut m = routed_mixer();
+        m.set_channel_output("chat", Some("Headset Earphone (A50 Voice)".into()));
+        m.set_channel_output("chat", None);
+        assert_eq!(m.backend_mut().routes.last(), Some(&(42, None)));
+        assert!(m.config().routed_processes.is_empty());
+    }
+
+    #[test]
+    fn moving_app_to_unrouted_channel_undoes_routing() {
+        let mut m = routed_mixer();
+        m.set_channel_output("chat", Some("Headset Earphone (A50 Voice)".into()));
+        m.assign_app("discord.exe", Assignment::Channel("media".into()));
+        assert_eq!(m.backend_mut().routes.last(), Some(&(42, None)));
+    }
+
+    #[test]
+    fn routing_left_by_a_previous_run_is_undone() {
+        let config = MixerConfig {
+            routed_processes: vec!["discord.exe".into()],
+            ..Default::default()
+        };
+        let mut discord = session("d", "discord.exe");
+        discord.pid = 42;
+        let backend = FakeBackend {
+            sessions: vec![discord],
+            ..Default::default()
+        };
+        let mut m = Mixer::new(backend, config);
+        m.refresh();
+        assert_eq!(m.backend_mut().routes, vec![(42, None)]);
+        assert!(m.config().routed_processes.is_empty());
+    }
+
+    #[test]
+    fn device_with_new_id_after_driver_update_is_found_by_name() {
+        let mut m = routed_mixer();
+        m.set_channel_output("chat", Some("Headset Earphone (A50 Voice)".into()));
+        // Driver update: same device, new id and a Windows instance number.
+        m.backend_mut().outputs = vec![output("voice-new", "Headset Earphone (2- A50 Voice)")];
+        m.backend_mut().sessions[0].id = "d2".into(); // app restarted
+        m.refresh();
+        assert_eq!(
+            m.backend_mut().routes.last(),
+            Some(&(42, Some("voice-new".to_string())))
+        );
+        let stored = m.config().channel("chat").unwrap().output.clone().unwrap();
+        assert_eq!(stored.id.as_deref(), Some("voice-new"));
+        assert_eq!(stored.name, "Headset Earphone (A50 Voice)");
+    }
+
+    #[test]
+    fn unplugged_output_leaves_routing_alone_and_shows_unavailable() {
+        let mut m = routed_mixer();
+        m.set_channel_output("chat", Some("Headset Earphone (A50 Voice)".into()));
+        let calls = m.backend_mut().routes.len();
+        m.backend_mut().outputs.clear();
+        m.refresh();
+        assert_eq!(m.backend_mut().routes.len(), calls);
+        let chat = m
+            .snapshot()
+            .channels
+            .into_iter()
+            .find(|c| c.id == "chat")
+            .unwrap();
+        assert!(!chat.output_available);
+    }
+
+    #[test]
+    fn mic_channel_ignores_output() {
+        let mut m = routed_mixer();
+        m.set_channel_output("mic", Some("Headphones (A50 Game)".into()));
+        assert!(m.config().channel("mic").unwrap().output.is_none());
     }
 
     #[test]

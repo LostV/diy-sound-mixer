@@ -12,6 +12,10 @@ export interface ChannelSnapshot {
   peak: number;
   available: boolean;
   apps: string[];
+  /** Chosen output device name; null = Windows default. Playback only. */
+  output: string | null;
+  /** False when the chosen output is not connected right now. */
+  outputAvailable: boolean;
 }
 
 export interface SessionSnapshot {
@@ -31,4 +35,6 @@ export interface MixerSnapshot {
   sessionsVersion: number;
   captureDevices: string[];
   captureDevice: string | null;
+  outputDevices: string[];
+  routingSupported: boolean;
 }

@@ -14,6 +14,7 @@
       {
         "label": "main",
         "visible": false,
+        "dragDropEnabled": false,
         "title": "DIY Sound Mixer",
         "width": 1040,
         "height": 760,

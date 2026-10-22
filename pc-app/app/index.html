@@ -12,10 +12,6 @@
     <header>
       <h1>DIY Sound Mixer</h1>
       <div class="header-controls">
-        <label class="mic-picker">
-          Mikrofon
-          <select id="mic-select"></select>
-        </label>
         <label class="toggle">
           <input id="autostart" type="checkbox" />
           Start med Windows
@@ -26,23 +22,31 @@
 
     <section id="channels" class="channels" aria-label="Kanaler"></section>
 
-    <section class="sessions">
-      <h2>Apper med lyd</h2>
+    <section class="lane" aria-labelledby="uncontrolled-title">
+      <div class="lane-head">
+        <h2 id="uncontrolled-title">Ikke styrt</h2>
+        <p class="hint">
+          Dra en app til en kanal, eller hit for å la den være i fred. Klikk på en app for flere valg.
+        </p>
+      </div>
+      <div id="uncontrolled" class="dropzone chips" data-target="none"></div>
+    </section>
+
+    <details class="details">
+      <summary>Detaljer</summary>
       <table>
         <thead>
           <tr>
             <th>App</th>
             <th>Prosess</th>
-            <th>Enhet</th>
-            <th>Nå i</th>
-            <th>Regel</th>
+            <th>Spiller på</th>
+            <th>Plassert</th>
           </tr>
         </thead>
         <tbody id="session-rows"></tbody>
       </table>
-      <p class="hint">
-        «Standard» betyr at mappe-regler og standardkanalen bestemmer. Valget lagres per program.
-      </p>
-    </section>
+    </details>
+
+    <div id="chip-menu" class="chip-menu" role="menu" hidden></div>
   </body>
 </html>

@@ -23,6 +23,14 @@ pub struct CaptureInfo {
     pub muted: bool,
 }
 
+/// An active output device.
+#[derive(Debug, Clone, PartialEq)]
+pub struct DeviceInfo {
+    /// The OS endpoint id. Can change after driver updates.
+    pub id: String,
+    pub name: String,
+}
+
 /// Access to the operating system's audio sessions and microphone.
 ///
 /// All methods are called from the mixer host thread only. Implementations
@@ -35,6 +43,14 @@ pub trait AudioBackend {
     fn session_peak(&mut self, session_id: &str) -> f32;
     fn set_session_volume(&mut self, session_id: &str, volume: f32);
     fn set_session_mute(&mut self, session_id: &str, muted: bool);
+
+    /// Active output devices as of the last [`Self::scan_sessions`].
+    fn output_devices(&mut self) -> Vec<DeviceInfo>;
+    /// Whether [`Self::set_app_output`] can work on this system.
+    fn routing_supported(&mut self) -> bool;
+    /// Sends a process's audio to `device_id`, or back to the Windows default
+    /// with `None`. Returns false if the OS refused.
+    fn set_app_output(&mut self, pid: u32, device_id: Option<&str>) -> bool;
 
     /// Rescan the microphone: the first active capture device whose name
     /// contains `preferred` (case insensitive), else the Windows default.
@@ -59,6 +75,15 @@ impl<B: AudioBackend + ?Sized> AudioBackend for Box<B> {
     }
     fn set_session_mute(&mut self, session_id: &str, muted: bool) {
         (**self).set_session_mute(session_id, muted)
+    }
+    fn output_devices(&mut self) -> Vec<DeviceInfo> {
+        (**self).output_devices()
+    }
+    fn routing_supported(&mut self) -> bool {
+        (**self).routing_supported()
+    }
+    fn set_app_output(&mut self, pid: u32, device_id: Option<&str>) -> bool {
+        (**self).set_app_output(pid, device_id)
     }
     fn scan_capture(&mut self, preferred: Option<&str>) -> Option<CaptureInfo> {
         (**self).scan_capture(preferred)
@@ -90,6 +115,15 @@ impl AudioBackend for NullBackend {
     }
     fn set_session_volume(&mut self, _: &str, _: f32) {}
     fn set_session_mute(&mut self, _: &str, _: bool) {}
+    fn output_devices(&mut self) -> Vec<DeviceInfo> {
+        Vec::new()
+    }
+    fn routing_supported(&mut self) -> bool {
+        false
+    }
+    fn set_app_output(&mut self, _: u32, _: Option<&str>) -> bool {
+        false
+    }
     fn scan_capture(&mut self, _: Option<&str>) -> Option<CaptureInfo> {
         None
     }

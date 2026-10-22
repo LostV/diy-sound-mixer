@@ -132,6 +132,32 @@ fn set_capture_device(host: State<Host>, name: Option<String>) {
     host.send(Command::SetCaptureDevice { name });
 }
 
+/// `device` is an output device name; `None` = Windows default.
+#[tauri::command]
+fn set_channel_output(host: State<Host>, channel: String, device: Option<String>) {
+    host.send(Command::SetChannelOutput { channel, device });
+}
+
+/// The app's icon as a `data:` URL, or `None` if it has none. Async so the
+/// icon extraction runs off the main thread.
+#[tauri::command]
+async fn app_icon(path: String) -> Option<String> {
+    #[cfg(windows)]
+    {
+        use base64::Engine;
+        let png = mixer_wasapi::icon_png(&path, 48)?;
+        Some(format!(
+            "data:image/png;base64,{}",
+            base64::engine::general_purpose::STANDARD.encode(png)
+        ))
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = path;
+        None
+    }
+}
+
 #[tauri::command]
 fn get_autostart(app: AppHandle) -> bool {
     app.autolaunch().is_enabled().unwrap_or(false)
@@ -214,6 +240,8 @@ pub fn run() {
             toggle_mute,
             assign_app,
             set_capture_device,
+            set_channel_output,
+            app_icon,
             get_autostart,
             set_autostart,
             show_simulator,

@@ -21,6 +21,20 @@ pub struct ChannelConfig {
     /// 0..=100
     pub volume: u8,
     pub muted: bool,
+    /// Where the channel's apps play. `None` leaves them on the Windows default.
+    /// Only used by playback channels.
+    #[serde(default)]
+    pub output: Option<OutputDevice>,
+}
+
+/// A chosen output device. Found again by name if the id changes, see
+/// [`crate::devices::find_device`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OutputDevice {
+    pub name: String,
+    #[serde(default)]
+    pub id: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,6 +86,10 @@ pub struct MixerConfig {
     pub volume_step: u8,
     /// Part of the microphone's name, e.g. `A50`. `None` follows the Windows default.
     pub capture_device: Option<String>,
+    /// Processes we have sent to a specific output. Windows remembers that
+    /// across restarts, so we must know to undo it when the user changes
+    /// their mind, even after this app restarted.
+    pub routed_processes: Vec<String>,
 }
 
 impl Default for MixerConfig {
@@ -83,6 +101,7 @@ impl Default for MixerConfig {
             kind,
             volume: 100,
             muted: false,
+            output: None,
         };
         Self {
             channels: vec![
@@ -110,6 +129,7 @@ impl Default for MixerConfig {
             control_system_sounds: false,
             volume_step: 2,
             capture_device: None,
+            routed_processes: Vec::new(),
         }
     }
 }

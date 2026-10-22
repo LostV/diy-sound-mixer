@@ -24,6 +24,7 @@ mixer-core.workspace = true
 mixer-devices.workspace = true
 tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
+base64 = "0.22"
 
 [target.'cfg(windows)'.dependencies]
 mixer-wasapi.workspace = true

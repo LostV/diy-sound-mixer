@@ -42,6 +42,11 @@ pub enum Command {
     SetCaptureDevice {
         name: Option<String>,
     },
+    /// Output device name for a playback channel; `None` = Windows default.
+    SetChannelOutput {
+        channel: String,
+        device: Option<String>,
+    },
     Shutdown,
 }
 
@@ -141,6 +146,7 @@ fn handle<B: AudioBackend>(mixer: &mut Mixer<B>, cmd: Command) {
             assignment,
         } => mixer.assign_app(&process_name, assignment),
         Command::SetCaptureDevice { name } => mixer.set_capture_device(name),
+        Command::SetChannelOutput { channel, device } => mixer.set_channel_output(&channel, device),
         Command::Shutdown => {}
     }
 }
