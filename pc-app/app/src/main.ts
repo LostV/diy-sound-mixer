@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { ChannelSnapshot, MixerSnapshot, SessionSnapshot } from "./types";
 
 /** Ignore incoming volumes this long after the user touched a slider, so it doesn't jump back. */
@@ -11,11 +12,14 @@ interface ChannelView {
   device: HTMLSelectElement;
   deviceKey: string;
   value: HTMLElement;
-  slider: HTMLInputElement;
+  fader: HTMLElement;
+  faderFill: HTMLElement;
   meter: HTMLElement;
   mute: HTMLButtonElement;
   /** Drop zone with the app chips; null for the mic. */
   chips: HTMLElement | null;
+  /** The mic card's info chip (device name); null for playback. */
+  micInfo: HTMLElement | null;
   lastUserInput: number;
 }
 
@@ -68,6 +72,50 @@ autostartBox.addEventListener("change", async () => {
 });
 
 document.querySelector("#open-simulator")!.addEventListener("click", () => invoke("show_simulator"));
+
+// Custom title bar: the window has no system frame, so the glass reaches the edges.
+document.querySelector("#win-min")!.addEventListener("click", () => getCurrentWindow().minimize());
+document.querySelector("#win-close")!.addEventListener("click", () => invoke("hide_main"));
+
+// ---- window backdrop ----
+
+type Backdrop = "acrylic" | "mica" | "none";
+const BACKDROP_KEY = "backdrop";
+const backdropSelect = document.querySelector<HTMLSelectElement>("#backdrop")!;
+
+function readBackdrop(): Backdrop {
+  try {
+    const saved = localStorage.getItem(BACKDROP_KEY);
+    if (saved === "acrylic" || saved === "mica" || saved === "none") return saved;
+  } catch {
+    // storage unavailable: use the default
+  }
+  return "acrylic";
+}
+
+/** `none` paints the aurora ourselves; the others let Windows draw behind the glass. */
+async function applyBackdrop(kind: Backdrop) {
+  document.documentElement.dataset.backdrop = kind;
+  backdropSelect.value = kind;
+  try {
+    localStorage.setItem(BACKDROP_KEY, kind);
+  } catch {
+    // not remembered, still applied
+  }
+  try {
+    await invoke("set_backdrop", { kind });
+  } catch (e) {
+    console.error("backdrop", e);
+    // Fall back to our own background rather than a see-through window.
+    if (kind !== "none") {
+      document.documentElement.dataset.backdrop = "none";
+      backdropSelect.value = "none";
+    }
+  }
+}
+
+backdropSelect.addEventListener("change", () => applyBackdrop(backdropSelect.value as Backdrop));
+applyBackdrop(readBackdrop());
 
 // ---- icons ----
 
@@ -296,10 +344,13 @@ function renderDetails(snapshot: MixerSnapshot) {
 // ---- channels ----
 
 function buildChannel(ch: ChannelSnapshot): ChannelView {
-  const root = el("article", "channel");
+  const root = el("article", "channel glass");
   root.style.setProperty("--accent", ch.color);
 
-  const title = el("h2", undefined, ch.name);
+  const head = el("div", "channel-head");
+  head.append(el("span", "dot"), el("h2", undefined, ch.name));
+
+  const devicePill = el("label", "select-pill device-pill");
   const device = el("select", "device");
   device.setAttribute("aria-label", ch.kind === "capture" ? `${ch.name}: mikrofon` : `${ch.name}: utgang`);
   device.addEventListener("change", () => {
@@ -307,49 +358,108 @@ function buildChannel(ch: ChannelSnapshot): ChannelView {
     if (ch.kind === "capture") invoke("set_capture_device", { name: value });
     else invoke("set_channel_output", { channel: ch.id, device: value });
   });
+  devicePill.append(device);
 
-  const value = el("div", "value");
-
+  // Fader, meter, and a side column with the steps, the value and mute.
   const body = el("div", "body");
-  const slider = el("input", "slider");
-  slider.type = "range";
-  slider.min = "0";
-  slider.max = "100";
-  slider.setAttribute("aria-label", `${ch.name} volum`);
+  const fader = el("div", "fader");
+  fader.tabIndex = 0;
+  fader.setAttribute("role", "slider");
+  fader.setAttribute("aria-label", `${ch.name} volum`);
+  fader.setAttribute("aria-valuemin", "0");
+  fader.setAttribute("aria-valuemax", "100");
+  const faderFill = el("div", "fader-fill");
+  faderFill.append(el("span", "grip"));
+  fader.append(faderFill);
+
   const meterTrack = el("div", "meter");
   const meter = el("div", "meter-fill");
   meterTrack.append(meter);
-  body.append(slider, meterTrack);
 
+  const side = el("div", "side");
   const steps = el("div", "steps");
-  const down = el("button", "step", "−");
-  const up = el("button", "step", "+");
-  down.title = "Ett klikk mot klokka (som knotten)";
+  const up = el("button", "round", "+");
+  const down = el("button", "round", "−");
+  up.setAttribute("aria-label", `${ch.name}: opp ett hakk`);
+  down.setAttribute("aria-label", `${ch.name}: ned ett hakk`);
   up.title = "Ett klikk med klokka (som knotten)";
-  steps.append(down, up);
-
+  down.title = "Ett klikk mot klokka (som knotten)";
+  steps.append(up, down);
+  const value = el("div", "value");
   const mute = el("button", "mute", "Mute");
+  side.append(steps, value, mute);
+  body.append(fader, meterTrack, side);
 
+  root.append(head, devicePill, body);
   let chips: HTMLElement | null = null;
-  root.append(title, device, value, body, steps, mute);
+  let micInfo: HTMLElement | null = null;
   if (ch.kind === "playback") {
     chips = el("div", "dropzone chips");
     makeDropZone(chips, ch.id);
     root.append(chips);
+  } else {
+    const zone = el("div", "chips static");
+    micInfo = el("div", "chip info");
+    zone.append(micInfo);
+    root.append(zone);
   }
 
-  const view: ChannelView = { root, device, deviceKey: "", value, slider, meter, mute, chips, lastUserInput: -Infinity };
-  slider.addEventListener("input", () => {
+  const view: ChannelView = {
+    root,
+    device,
+    deviceKey: "",
+    value,
+    fader,
+    faderFill,
+    meter,
+    mute,
+    chips,
+    micInfo,
+    lastUserInput: -Infinity,
+  };
+
+  const setLocal = (volume: number) => {
     view.lastUserInput = performance.now();
-    view.value.textContent = `${slider.value}%`;
-    invoke("set_volume", { channel: ch.id, volume: Number(slider.value) });
+    showVolume(view, volume);
+    invoke("set_volume", { channel: ch.id, volume });
+  };
+  const fromPointer = (e: PointerEvent) => {
+    const rect = fader.getBoundingClientRect();
+    return Math.round(Math.max(0, Math.min(1, (rect.bottom - e.clientY) / rect.height)) * 100);
+  };
+  fader.addEventListener("pointerdown", (e) => {
+    fader.setPointerCapture(e.pointerId);
+    fader.focus();
+    setLocal(fromPointer(e));
   });
-  down.addEventListener("click", () => invoke("adjust_volume", { channel: ch.id, steps: -1 }));
+  fader.addEventListener("pointermove", (e) => {
+    if (fader.hasPointerCapture(e.pointerId)) setLocal(fromPointer(e));
+  });
+  fader.addEventListener("keydown", (e) => {
+    const current = Number(fader.getAttribute("aria-valuenow") ?? 0);
+    const step = (steps: number) => invoke("adjust_volume", { channel: ch.id, steps });
+    if (e.key === "ArrowUp" || e.key === "ArrowRight") step(1);
+    else if (e.key === "ArrowDown" || e.key === "ArrowLeft") step(-1);
+    else if (e.key === "PageUp") setLocal(Math.min(100, current + 10));
+    else if (e.key === "PageDown") setLocal(Math.max(0, current - 10));
+    else if (e.key === "Home") setLocal(0);
+    else if (e.key === "End") setLocal(100);
+    else return;
+    e.preventDefault();
+  });
+
   up.addEventListener("click", () => invoke("adjust_volume", { channel: ch.id, steps: 1 }));
+  down.addEventListener("click", () => invoke("adjust_volume", { channel: ch.id, steps: -1 }));
   mute.addEventListener("click", () => invoke("toggle_mute", { channel: ch.id }));
   return view;
 }
 
+function showVolume(view: ChannelView, volume: number) {
+  view.value.textContent = `${volume}%`;
+  view.faderFill.style.height = `${volume}%`;
+  view.fader.setAttribute("aria-valuenow", String(volume));
+  view.fader.setAttribute("aria-valuetext", `${volume} prosent`);
+}
 /** Fills a device picker; rebuilt only when the choices change. */
 function renderDevicePicker(view: ChannelView, ch: ChannelSnapshot, snapshot: MixerSnapshot) {
   const capture = ch.kind === "capture";
@@ -362,7 +472,9 @@ function renderDevicePicker(view: ChannelView, ch: ChannelSnapshot, snapshot: Mi
   if (key === view.deviceKey) return;
   view.deviceKey = key;
 
-  view.device.hidden = hidden;
+  const pill = view.device.parentElement as HTMLElement;
+  pill.hidden = hidden;
+  pill.classList.toggle("missing", missing);
   view.device.title = hidden ? "" : capture ? "Mikrofon for denne kanalen" : "Hvor appene i kanalen spiller";
   const options: [string, string][] = [["", "Windows-standard"], ...devices.map((d): [string, string] => [d, d])];
   // Keep a saved choice visible while the device is unplugged.
@@ -375,7 +487,6 @@ function renderDevicePicker(view: ChannelView, ch: ChannelSnapshot, snapshot: Mi
     }),
   );
   view.device.value = chosen ?? "";
-  view.device.classList.toggle("missing", missing);
 }
 
 function renderChannels(snapshot: MixerSnapshot) {
@@ -397,15 +508,19 @@ function renderChannels(snapshot: MixerSnapshot) {
   for (const ch of channels) {
     const view = channelViews.get(ch.id)!;
     const touching = performance.now() - view.lastUserInput < USER_INPUT_GRACE_MS;
-    if (!touching) {
-      view.slider.value = String(ch.volume);
-      view.value.textContent = `${ch.volume}%`;
-    }
+    if (!touching) showVolume(view, ch.volume);
     view.meter.style.height = `${meterLevel(ch.muted ? 0 : ch.peak) * 100}%`;
     view.root.classList.toggle("muted", ch.muted);
     view.root.classList.toggle("unavailable", !ch.available);
     view.mute.textContent = ch.muted ? "Mutet" : "Mute";
     view.mute.setAttribute("aria-pressed", String(ch.muted));
+    if (view.micInfo) {
+      const text = ch.available ? `Inngang · ${ch.apps[0] ?? ""}` : "Ingen mikrofon";
+      if (view.micInfo.textContent !== text) {
+        view.micInfo.textContent = text;
+        view.micInfo.title = text;
+      }
+    }
     renderDevicePicker(view, ch, snapshot);
   }
 }

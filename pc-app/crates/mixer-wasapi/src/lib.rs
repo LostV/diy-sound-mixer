@@ -133,6 +133,10 @@ impl WasapiBackend {
             let control: IAudioSessionControl2 = control.cast()?;
             let id = unsafe { take_pwstr(control.GetSessionInstanceIdentifier()?) };
             let pid = unsafe { control.GetProcessId() }.unwrap_or(0);
+            // The mixer's own window has an audio session too; it is not an app to mix.
+            if pid == std::process::id() {
+                continue;
+            }
             let is_system_sounds = unsafe { control.IsSystemSoundsSession() } == S_OK;
             let session_name = unsafe { control.GetDisplayName() }
                 .map(|p| unsafe { take_pwstr(p) })

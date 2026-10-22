@@ -168,6 +168,30 @@ fn set_autostart(app: AppHandle, enabled: bool) -> Result<(), String> {
     set_autostart_enabled(&app, enabled)
 }
 
+/// Window background: `acrylic` (blurred desktop), `mica` (Windows 11 app
+/// material) or `none` (the app paints its own background).
+#[tauri::command]
+fn set_backdrop(window: tauri::WebviewWindow, kind: String) -> Result<(), String> {
+    use tauri::window::{Effect, EffectsBuilder};
+    let effect = match kind.as_str() {
+        "acrylic" => Some(Effect::Acrylic),
+        "mica" => Some(Effect::Mica),
+        "none" => None,
+        other => return Err(format!("unknown backdrop {other}")),
+    };
+    let result = match effect {
+        Some(effect) => window.set_effects(EffectsBuilder::new().effect(effect).build()),
+        None => window.set_effects(None),
+    };
+    result.map_err(|e| e.to_string())
+}
+
+/// The title bar's close button: keep running in the tray, like closing does.
+#[tauri::command]
+fn hide_main(window: tauri::WebviewWindow) {
+    let _ = window.hide();
+}
+
 #[tauri::command]
 fn show_simulator(app: AppHandle) {
     open_simulator(&app);
@@ -245,6 +269,8 @@ pub fn run() {
             get_autostart,
             set_autostart,
             show_simulator,
+            set_backdrop,
+            hide_main,
             sim_send
         ])
         .build(tauri::generate_context!())

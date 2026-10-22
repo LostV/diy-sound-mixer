@@ -16,10 +16,16 @@
         "visible": false,
         "dragDropEnabled": false,
         "title": "DIY Sound Mixer",
-        "width": 1040,
-        "height": 760,
-        "minWidth": 720,
-        "minHeight": 520
+        "width": 1080,
+        "height": 800,
+        "minWidth": 760,
+        "minHeight": 560,
+        "decorations": false,
+        "shadow": true,
+        "transparent": true,
+        "windowEffects": {
+          "effects": ["acrylic"]
+        }
       }
     ],
     "security": {

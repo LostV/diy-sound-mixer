@@ -8,44 +8,68 @@
     <script type="module" src="/src/main.ts" defer></script>
   </head>
 
-  <body>
-    <header>
-      <h1>DIY Sound Mixer</h1>
+  <body class="mixer">
+    <div class="aurora" aria-hidden="true">
+      <span class="blob purple"></span>
+      <span class="blob pink"></span>
+      <span class="blob teal"></span>
+      <span class="blob orange"></span>
+    </div>
+
+    <header class="titlebar" data-tauri-drag-region>
+      <h1 data-tauri-drag-region>DIY Sound Mixer</h1>
       <div class="header-controls">
-        <label class="toggle">
-          <input id="autostart" type="checkbox" />
+        <label class="glass-pill switch">
+          <input id="autostart" type="checkbox" role="switch" />
+          <span class="track" aria-hidden="true"><span class="knob"></span></span>
           Start med Windows
         </label>
-        <button id="open-simulator" type="button">Simulator</button>
+        <label class="glass-pill select-pill">
+          <span class="sr-only">Bakgrunn</span>
+          <select id="backdrop" title="Vindusbakgrunn">
+            <option value="acrylic">Acrylic</option>
+            <option value="mica">Mica</option>
+            <option value="none">Aurora</option>
+          </select>
+        </label>
+        <button id="open-simulator" class="glass-pill strong" type="button">Simulator</button>
+        <div class="window-buttons">
+          <button id="win-min" class="win-btn" type="button" aria-label="Minimer">
+            <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 5h8" /></svg>
+          </button>
+          <button id="win-close" class="win-btn close" type="button" aria-label="Lukk til systemstatusfeltet">
+            <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1.5 1.5l7 7M8.5 1.5l-7 7" /></svg>
+          </button>
+        </div>
       </div>
     </header>
 
-    <section id="channels" class="channels" aria-label="Kanaler"></section>
+    <main>
+      <section id="channels" class="channels" aria-label="Kanaler"></section>
 
-    <section class="lane" aria-labelledby="uncontrolled-title">
-      <div class="lane-head">
-        <h2 id="uncontrolled-title">Ikke styrt</h2>
-        <p class="hint">
-          Dra en app til en kanal, eller hit for å la den være i fred. Klikk på en app for flere valg.
-        </p>
-      </div>
-      <div id="uncontrolled" class="dropzone chips" data-target="none"></div>
-    </section>
+      <section class="glass lane" aria-labelledby="uncontrolled-title">
+        <div class="lane-head">
+          <h2 id="uncontrolled-title">Ikke styrt</h2>
+          <p class="hint">Dra en app hit for å la den være i fred · klikk på en app for flere valg</p>
+        </div>
+        <div id="uncontrolled" class="dropzone chips" data-target="none"></div>
+      </section>
 
-    <details class="details">
-      <summary>Detaljer</summary>
-      <table>
-        <thead>
-          <tr>
-            <th>App</th>
-            <th>Prosess</th>
-            <th>Spiller på</th>
-            <th>Plassert</th>
-          </tr>
-        </thead>
-        <tbody id="session-rows"></tbody>
-      </table>
-    </details>
+      <details class="glass details">
+        <summary>Detaljer</summary>
+        <table>
+          <thead>
+            <tr>
+              <th>App</th>
+              <th>Prosess</th>
+              <th>Spiller på</th>
+              <th>Plassert</th>
+            </tr>
+          </thead>
+          <tbody id="session-rows"></tbody>
+        </table>
+      </details>
+    </main>
 
     <div id="chip-menu" class="chip-menu" role="menu" hidden></div>
   </body>
