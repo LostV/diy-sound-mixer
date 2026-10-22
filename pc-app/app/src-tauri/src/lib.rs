@@ -249,6 +249,14 @@ pub fn run() {
             links::listen(app.handle().clone(), links);
 
             tray::build(app.handle())?;
+            // The autostart entry stores the exe path; rewrite it so it
+            // follows the installed app rather than an old dev build.
+            #[cfg(not(debug_assertions))]
+            if app.autolaunch().is_enabled().unwrap_or(false) {
+                if let Err(e) = app.autolaunch().enable() {
+                    log::error!("refreshing autostart: {e}");
+                }
+            }
             if !std::env::args().any(|a| a == MINIMIZED_ARG) {
                 show_main(app.handle());
             }
