@@ -138,8 +138,20 @@ Fase 0–3 kan gjøres **nå, uten hardware**.
 
 ### Notat: Astro A50
 
-A50-basestasjonen viser seg ofte som **to avspillingsenheter** i Windows ("Game" og "Voice/Chat"), og headsettet har sin egen game/chat-balanse. Det avhenger av generasjon (Gen 4, Gen 5, A50 X). Hvis du har to enheter, kan routingen (lag 2) sende Chat-kanalen til "Voice"-enheten og resten til "Game", slik at balansehjulet på headsettet fortsatt fungerer. Lydmotoren håndterer uansett apper på alle enheter samtidig.
+Skannet på maskinen din (2026-10-22). Windows ser A50-en som:
 
-## Åpne spørsmål
+| Type | Enhet |
+|---|---|
+| Avspilling | `Headphones (A50 Game)` |
+| Avspilling | `Headset Earphone (A50 Voice)` |
+| Opptak | `Headset Microphone (A50 Mic)` |
+| Opptak | `Line (A50 Stream Out)` |
 
-1. **Hvilken A50-generasjon har du**, og hvilke lydenheter dukker opp i Windows (Innstillinger → System → Lyd)?
+- Headsettet har sin egen game/voice-balanse. Med routing (lag 2) kan Chat-kanalen sendes til **A50 Voice** og resten til **A50 Game**, slik at balansehjulet fortsatt fungerer.
+- **Windows-standardmikrofonen er DualSense-kontrolleren**, ikke A50. Mic-kanalen har derfor et eget valg av mikrofon (`captureDevice` i konfigurasjonen), slik at den kan låses til `Headset Microphone (A50 Mic)`.
+- Det finnes også flere virtuelle enheter (Steam Streaming, Oculus, S/PDIF, DualSense). Lydmotoren håndterer apper på alle enheter samtidig.
+
+## Fremdrift
+
+- [x] Fase 0: repo, Cargo workspace, Tauri-app
+- [x] Fase 1: lydmotor (lag 1). Kanaler, regler, volum og mute per kanal, mic med valg av enhet, nivåmålere og testvindu. Testet med enhetstester og en skanning av maskinen som bare leser. Selve appen er ikke kjørt ennå.

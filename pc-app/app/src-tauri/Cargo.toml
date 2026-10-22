@@ -1,0 +1,26 @@
+[package]
+name = "diy-sound-mixer"
+description = "DIY Sound Mixer: tray app and settings window"
+authors = ["LostV"]
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+# The `_lib` suffix keeps the lib name distinct from the bin name on Windows,
+# see https://github.com/rust-lang/cargo/issues/8519
+name = "diy_sound_mixer_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde.workspace = true
+serde_json.workspace = true
+log.workspace = true
+mixer-core.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+mixer-wasapi.workspace = true

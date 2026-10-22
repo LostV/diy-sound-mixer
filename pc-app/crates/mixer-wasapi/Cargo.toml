@@ -1,0 +1,27 @@
+[package]
+name = "mixer-wasapi"
+description = "Windows Core Audio (WASAPI) backend for mixer-core."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+mixer-core.workspace = true
+log.workspace = true
+
+[target.'cfg(windows)'.dev-dependencies]
+windows = { version = "0.62" }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.62", features = [
+    "Win32_Devices_FunctionDiscovery",
+    "Win32_Foundation",
+    "Win32_Media_Audio",
+    "Win32_Media_Audio_Endpoints",
+    "Win32_Storage_FileSystem",
+    "Win32_System_Com",
+    "Win32_System_Com_StructuredStorage",
+    "Win32_System_Threading",
+    "Win32_System_Variant",
+    "Win32_UI_Shell_PropertiesSystem",
+] }
