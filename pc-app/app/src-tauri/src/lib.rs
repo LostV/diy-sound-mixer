@@ -192,8 +192,11 @@ fn hide_main(window: tauri::WebviewWindow) {
     let _ = window.hide();
 }
 
+/// Async on purpose: creating a window from a synchronous command deadlocks
+/// on Windows (the command runs on the thread that must build the window),
+/// leaving a blank window that can't be closed.
 #[tauri::command]
-fn show_simulator(app: AppHandle) {
+async fn show_simulator(app: AppHandle) {
     open_simulator(&app);
 }
 
