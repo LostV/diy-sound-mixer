@@ -20,8 +20,9 @@ use tauri::{AppHandle, Manager};
 
 use crate::{Devices, Host};
 
-/// Port the desktop firmware builds connect to.
-pub const DEV_PORT: u16 = 47800;
+/// Port the desktop firmware builds connect to. Dev builds of the app use
+/// the next one, so they can run next to the installed app.
+pub const DEV_PORT: u16 = if cfg!(debug_assertions) { 47801 } else { 47800 };
 
 /// Outgoing line queues per connected link.
 #[derive(Clone, Default)]

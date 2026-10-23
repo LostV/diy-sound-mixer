@@ -19,7 +19,7 @@ cmake --build firmware/panel-esp32/build-sim --config Release --target panel_sim
 firmware/panel-esp32/build-sim/Release/panel_sim.exe
 ```
 
-Start the PC app first (or afterwards: the simulator reconnects every second). Tap a channel to toggle mute. To connect elsewhere, pass a host and port: `panel_sim.exe 127.0.0.1 47800`.
+Start the PC app first (or afterwards: the simulator reconnects every second). Tap a channel to toggle mute. To connect elsewhere, pass a host and port. A dev build of the app (`npm run tauri dev`) listens on 47801 so it can run next to the installed app: `panel_sim.exe 127.0.0.1 47801`.
 
 ### The two pages
 

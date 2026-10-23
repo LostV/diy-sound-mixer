@@ -5,7 +5,7 @@ The protocol between the PC app and the mixer hardware: the Pico 2 (knobs), the 
 ## Transport
 
 - USB CDC serial. The baud rate does not matter for USB CDC; use 115200.
-- During development, also local TCP on `127.0.0.1:47800`, used by the desktop simulator of the screen. Each connection is its own device.
+- During development, also local TCP on `127.0.0.1:47800`, used by the desktop simulator of the screen. Each connection is its own device. Dev builds of the app listen on 47801 instead.
 - **One JSON object per line**, terminated by `\n`. `\r\n` is accepted.
 - Each message has a type field `t`.
 - Lines that cannot be parsed are logged and ignored on both sides. Never crash on garbage.

@@ -247,6 +247,19 @@ fn sim_send(host: State<Host>, devices: State<Devices>, line: String) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let mut context = tauri::generate_context!();
+    // Dev builds get their own identity, so they run next to the installed
+    // app instead of being folded into it by single-instance, and keep their
+    // own config and webview data.
+    #[cfg(debug_assertions)]
+    {
+        let config = context.config_mut();
+        config.identifier.push_str(".dev");
+        for window in &mut config.app.windows {
+            window.title.push_str(" (dev)");
+        }
+    }
+
     let app = tauri::Builder::default()
         // Must be first: a second launch just brings up the running one.
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -329,7 +342,7 @@ pub fn run() {
             hide_main,
             sim_send
         ])
-        .build(tauri::generate_context!())
+        .build(context)
         .expect("error while building tauri application");
 
     app.run(|app, event| {
