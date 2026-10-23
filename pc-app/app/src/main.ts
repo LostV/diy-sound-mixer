@@ -61,6 +61,30 @@ function meterLevel(peak: number) {
 
 // ---- header ----
 
+// Settings live in a popover so the title bar fits the narrow window.
+const settingsButton = document.querySelector<HTMLButtonElement>("#open-settings")!;
+const settingsPanel = document.querySelector<HTMLElement>("#settings-panel")!;
+
+function setSettingsOpen(open: boolean, restoreFocus = true) {
+  if (settingsPanel.hidden === !open) return;
+  settingsPanel.hidden = !open;
+  settingsButton.setAttribute("aria-expanded", String(open));
+  if (open) settingsPanel.querySelector<HTMLElement>("input, select, button")?.focus();
+  else if (restoreFocus) settingsButton.focus();
+}
+
+settingsButton.addEventListener("click", () => setSettingsOpen(settingsPanel.hidden === true));
+document.addEventListener("pointerdown", (e) => {
+  const target = e.target as Node;
+  if (!settingsPanel.contains(target) && !settingsButton.contains(target)) setSettingsOpen(false, false);
+});
+settingsPanel.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  e.preventDefault();
+  setSettingsOpen(false);
+});
+window.addEventListener("blur", () => setSettingsOpen(false, false));
+
 const autostartBox = document.querySelector<HTMLInputElement>("#autostart")!;
 invoke<boolean>("get_autostart").then((on) => (autostartBox.checked = on));
 autostartBox.addEventListener("change", async () => {
@@ -359,12 +383,15 @@ function renderDetails(snapshot: MixerSnapshot) {
 
 // ---- channels ----
 
-function buildChannel(ch: ChannelSnapshot): ChannelView {
+/** `index` is the channel's place, which is also its knob on the hardware. */
+function buildChannel(ch: ChannelSnapshot, index: number): ChannelView {
   const root = el("article", "channel card");
   root.style.setProperty("--accent", ch.color);
 
   const head = el("div", "channel-head");
-  head.append(el("span", "dot"), el("h2", undefined, ch.name));
+  const knob = el("span", "knob-badge", String(index + 1));
+  knob.title = tr().knob(index + 1);
+  head.append(knob, el("h2", undefined, ch.name));
 
   const devicePill = el("label", "select-pill device-pill");
   const device = el("select", "device");
@@ -376,7 +403,7 @@ function buildChannel(ch: ChannelSnapshot): ChannelView {
   });
   devicePill.append(device);
 
-  // Fader, meter, and a side column with the steps, the value and mute.
+  // Meter, fader, and a side column with the value, the steps and mute.
   const body = el("div", "body");
   const fader = el("div", "fader");
   fader.tabIndex = 0;
@@ -394,17 +421,17 @@ function buildChannel(ch: ChannelSnapshot): ChannelView {
 
   const side = el("div", "side");
   const steps = el("div", "steps");
-  const up = el("button", "round", "+");
-  const down = el("button", "round", "−");
+  const up = el("button", "step", "+");
+  const down = el("button", "step", "−");
   up.setAttribute("aria-label", tr().stepUpAria(ch.name));
   down.setAttribute("aria-label", tr().stepDownAria(ch.name));
   up.title = tr().stepUpTitle;
   down.title = tr().stepDownTitle;
-  steps.append(up, down);
+  steps.append(down, up);
   const value = el("div", "value");
   const mute = el("button", "mute", tr().mute);
-  side.append(steps, value, mute);
-  body.append(fader, meterTrack, side);
+  side.append(value, steps, mute);
+  body.append(meterTrack, fader, side);
 
   root.append(head, devicePill, body);
   let chips: HTMLElement | null = null;
@@ -511,8 +538,8 @@ function renderChannels(snapshot: MixerSnapshot) {
     channelOrder = order;
     channelViews.clear();
     channelsEl.replaceChildren(
-      ...channels.map((c) => {
-        const view = buildChannel(c);
+      ...channels.map((c, i) => {
+        const view = buildChannel(c, i);
         channelViews.set(c.id, view);
         return view.root;
       }),

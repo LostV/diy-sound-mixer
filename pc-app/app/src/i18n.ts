@@ -8,6 +8,7 @@ const en = {
   // main window
   autostart: "Start with Windows",
   language: "Language",
+  settings: "Settings",
   backdrop: "Background",
   backdropTitle: "Window background",
   minimize: "Minimize",
@@ -65,6 +66,7 @@ export type Strings = typeof en;
 const no: Strings = {
   autostart: "Start med Windows",
   language: "Språk",
+  settings: "Innstillinger",
   backdrop: "Bakgrunn",
   backdropTitle: "Vindusbakgrunn",
   minimize: "Minimer",

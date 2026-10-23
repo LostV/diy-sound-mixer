@@ -1,32 +1,27 @@
-/* Design A2: solid channel cards with tinted frosted-glass faders, on top of
-   the window backdrop (docs/design/A2-frost-kantlys.png for the original). */
+/* Design F5: a dark acrylic window with flat, solid channel cards. The
+   fader is a see-through window in the card, tinted with the channel
+   colour. Laid out for a ~905×690 window and still fits the 760×560 minimum. */
 
 :root {
   --bg: #0a0e1c;
   --panel: #1c2030;
   --panel-2: #262a38;
-  --text: #f4f5f8;
-  --text-dim: rgb(255 255 255 / 62%);
-  --text-faint: rgb(255 255 255 / 42%);
+  --text: #eceef1;
+  --text-dim: rgb(255 255 255 / 66%);
+  --text-faint: rgb(255 255 255 / 50%);
   --danger: #f43f5e;
   --warn: #fcd34d;
-  --radius: 22px;
+  --radius: 12px;
 
-  /* How dark the window backdrop is tinted. Kept light because Windows'
-     Acrylic already blurs the desktop behind. */
-  --acrylic-tint: rgb(8 10 22 / 24%);
-  --mica-tint: rgb(8 10 22 / 14%);
-  /* Solid cards */
-  --card-fill: linear-gradient(#242939, #1a1e2c);
-  /* Flat card colour for the channel cards, painted around the fader. */
-  --card-solid: #1f2332;
-  --card-edge: linear-gradient(160deg, rgb(255 255 255 / 16%), rgb(255 255 255 / 4%) 40%, rgb(255 255 255 / 6%));
-  --card-shadow: 0 14px 34px rgb(0 0 0 / 40%), inset 0 1px 0 rgb(255 255 255 / 8%);
-
-  /* Glass controls */
-  --glass-edge-soft: linear-gradient(135deg, rgb(255 255 255 / 55%), rgb(255 255 255 / 7%) 50%, rgb(255 255 255 / 20%));
-  --control-fill: rgb(255 255 255 / 8%);
-  --control-hover: rgb(255 255 255 / 14%);
+  /* How dark the window backdrop is tinted on top of Windows' own blur. */
+  --acrylic-tint: rgb(22 24 28 / 42%);
+  --mica-tint: rgb(22 24 28 / 24%);
+  /* Solid cards, also painted around the fader. */
+  --card-solid: #1c1e22;
+  --card-edge: rgb(255 255 255 / 7%);
+  --raised: #26292e;
+  --control: #2a2d33;
+  --control-hover: #34383f;
 
   color-scheme: dark;
   font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
@@ -69,9 +64,9 @@ button {
 button {
   cursor: pointer;
   padding: 6px 10px;
-  background: var(--control-fill);
-  border: 1px solid rgb(255 255 255 / 14%);
-  border-radius: 8px;
+  background: var(--control);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 6px;
 }
 
 button:hover {
@@ -80,20 +75,25 @@ button:hover {
 
 select {
   padding: 4px 8px;
-  background: var(--panel-2);
-  border: 1px solid rgb(255 255 255 / 14%);
-  border-radius: 8px;
+  background: var(--raised);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 6px;
+}
+
+select option {
+  background: #24272c;
+  color: var(--text);
 }
 
 :focus-visible {
-  outline: 2px solid #a5b4fc;
+  outline: 2px solid #8ec5ff;
   outline-offset: 2px;
 }
 
 .hint {
   margin: 0;
   color: var(--text-faint);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 .sr-only {
@@ -105,32 +105,25 @@ select {
   white-space: nowrap;
 }
 
-/* ---- Cards and glass controls ---- */
+/* ---- Cards ---- */
 
 .card,
-.glass-pill,
-.select-pill,
-.round,
-.mute,
-.chip {
+.device-pill {
   position: relative;
   isolation: isolate;
 }
 
-/* Edge-lit border: a gradient ring drawn with a mask, bright top-left. */
+/* The card's outline is drawn as a ring above the painted card colour
+   (see .fader), which a plain border would end up underneath. */
 .card::before,
-.glass-pill::before,
-.select-pill::before,
-.round::before,
-.mute::before,
-.chip::before {
+.device-pill::before {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: -1;
-  padding: var(--edge-width, 1px);
+  z-index: 0;
+  padding: 1px;
   border-radius: inherit;
-  background: var(--edge, var(--glass-edge-soft));
+  background: var(--edge, var(--card-edge));
   mask:
     linear-gradient(#000 0 0) content-box,
     linear-gradient(#000 0 0);
@@ -139,35 +132,8 @@ select {
 }
 
 .card {
-  --edge: var(--card-edge);
-  background: var(--card-fill);
+  background: var(--card-solid);
   border-radius: var(--radius);
-  box-shadow: var(--card-shadow);
-}
-
-.glass-pill,
-.select-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  height: 34px;
-  padding: 0 14px;
-  background: var(--control-fill);
-  border: none;
-  border-radius: 17px;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%);
-  color: var(--text-dim);
-  font-size: 0.85rem;
-}
-
-.glass-pill.strong {
-  background: rgb(255 255 255 / 14%);
-  color: var(--text);
-  font-weight: 600;
-}
-
-.glass-pill:hover {
-  background: var(--control-hover);
 }
 
 /* ---- Mixer window ---- */
@@ -202,7 +168,7 @@ html[data-backdrop="mica"] {
 
 html[data-backdrop="acrylic"] .aurora,
 html[data-backdrop="mica"] .aurora {
-  opacity: 0.22;
+  display: none;
 }
 
 .blob {
@@ -247,107 +213,73 @@ html[data-backdrop="mica"] .aurora {
   opacity: 0.45;
 }
 
+/* ---- Title bar ---- */
+
 .titlebar {
   display: flex;
   flex: none;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  height: 64px;
-  padding: 0 12px 0 28px;
+  gap: 10px;
+  height: 44px;
+  padding-left: 14px;
   user-select: none;
 }
 
+.app-mark {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #ff9a52 0 50%, #6cb6ff 50%);
+}
+
 .titlebar h1 {
-  font-size: 1.4rem;
+  font-size: 0.95rem;
 }
 
 .header-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;
+  margin-left: auto;
 }
 
-.switch {
-  cursor: pointer;
-}
-
-.switch input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.switch .track {
-  position: relative;
-  width: 30px;
-  height: 17px;
-  border-radius: 9px;
-  background: rgb(255 255 255 / 20%);
-  transition: background 150ms;
-}
-
-.switch .knob {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 13px;
-  height: 13px;
-  border-radius: 50%;
-  background: white;
-  transition: transform 150ms;
-}
-
-.switch input:checked + .track {
-  background: #a78bfa;
-}
-
-.switch input:checked + .track .knob {
-  transform: translateX(13px);
-}
-
-.switch:has(input:focus-visible) {
-  outline: 2px solid #a5b4fc;
-  outline-offset: 2px;
-}
-
-.select-pill select {
-  appearance: none;
-  padding: 0 18px 0 0;
-  background: transparent
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='white' stroke-opacity='.55' stroke-width='1.4'/%3E%3C/svg%3E")
-    no-repeat right center;
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  background: rgb(255 255 255 / 6%);
   border: none;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  outline: none;
 }
 
-.select-pill:has(select:focus-visible) {
-  outline: 2px solid #a5b4fc;
-  outline-offset: 2px;
+.icon-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
 }
 
-.select-pill option {
-  background: #1d2130;
-  color: var(--text);
+.icon-btn[aria-expanded="true"] {
+  background: rgb(255 255 255 / 14%);
 }
 
 .window-buttons {
   display: flex;
-  margin-left: 6px;
+  margin-left: 4px;
 }
 
 .win-btn {
   display: grid;
   place-items: center;
-  width: 42px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   background: transparent;
   border: none;
-  border-radius: 8px;
+  border-radius: 0;
 }
 
 .win-btn svg {
@@ -366,10 +298,107 @@ html[data-backdrop="mica"] .aurora {
   background: #c42b1c;
 }
 
+/* ---- Popovers: settings and the chip menu ---- */
+
+.popover {
+  position: fixed;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: rgb(30 32 37 / 94%);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: 10px;
+  box-shadow: 0 18px 40px rgb(0 0 0 / 45%);
+  backdrop-filter: blur(30px) saturate(150%);
+}
+
+.popover[hidden] {
+  display: none;
+}
+
+.settings-panel {
+  top: 44px;
+  right: 92px;
+  width: 270px;
+  gap: 2px;
+}
+
+.setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 42px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 0.87rem;
+}
+
+.setting select {
+  min-height: 30px;
+}
+
+.setting-button {
+  min-height: 38px;
+  margin-top: 4px;
+  text-align: left;
+  font-size: 0.87rem;
+}
+
+.switch {
+  cursor: pointer;
+}
+
+.switch input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch .track {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 18px;
+  border-radius: 9px;
+  background: rgb(255 255 255 / 22%);
+  transition: background 150ms;
+}
+
+.switch .knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: white;
+  transition: transform 150ms;
+}
+
+.switch input:checked + .track {
+  background: #4c9fff;
+}
+
+.switch input:checked + .track .knob {
+  transform: translateX(16px);
+}
+
+.switch:has(input:focus-visible) {
+  outline: 2px solid #8ec5ff;
+  outline-offset: 2px;
+}
+
+/* ---- Main area ---- */
+
 body.mixer main {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+  gap: 10px;
   min-height: 0;
-  padding: 4px 26px 24px;
+  padding: 0 12px 12px;
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: rgb(255 255 255 / 25%) transparent;
@@ -379,8 +408,10 @@ body.mixer main {
 
 .channels {
   display: grid;
+  flex: 1 0 auto;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px;
+  gap: 10px;
+  min-height: 400px;
 }
 
 /* The fader is a window through the card: the card has no background of
@@ -389,53 +420,81 @@ body.mixer main {
 .channel {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 10px;
   min-width: 0;
-  padding: 16px 16px 14px;
+  padding: 12px;
   overflow: hidden;
   background: none;
-}
-
-/* Keep the edge light above the painted card colour. */
-.channel::before {
-  z-index: 0;
 }
 
 .channel-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 2px 4px 0;
+  gap: 8px;
+  min-width: 0;
 }
 
 .channel-head h2 {
-  font-size: 1.12rem;
+  overflow: hidden;
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.dot {
-  width: 10px;
-  height: 10px;
+/* Which knob on the hardware this channel is. */
+.knob-badge {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 10px var(--accent);
+  color: #15161a;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.channel.unavailable .knob-badge {
+  background: #6f747d;
 }
 
 .device-pill {
   display: flex;
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 15px;
+  height: 32px;
+  border-radius: 6px;
+  background: #24272c;
   font-size: 0.78rem;
 }
 
 .device-pill select {
   flex: 1;
   min-width: 0;
+  padding: 0 24px 0 8px;
+  appearance: none;
+  background: transparent
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='white' stroke-opacity='.6' stroke-width='1.4'/%3E%3C/svg%3E")
+    no-repeat right 9px center;
+  border: none;
+  color: var(--text-dim);
   text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.device-pill:has(select:focus-visible) {
+  outline: 2px solid #8ec5ff;
+  outline-offset: 2px;
+}
+
+.device-pill select:focus-visible {
+  outline: none;
 }
 
 .device-pill.missing {
-  --edge: linear-gradient(135deg, rgb(252 211 77 / 70%), rgb(252 211 77 / 20%) 50%, rgb(252 211 77 / 40%));
+  --edge: rgb(252 211 77 / 60%);
+}
+
+.device-pill.missing select {
   color: var(--warn);
 }
 
@@ -445,9 +504,10 @@ body.mixer main {
 
 .body {
   display: grid;
-  grid-template-columns: 52px 8px minmax(0, 1fr);
+  flex: 1;
+  grid-template-columns: 6px 52px minmax(0, 1fr);
   gap: 10px;
-  height: 274px;
+  min-height: 190px;
 }
 
 /* The fader sits below this box (z-index -1), so let clicks through the box
@@ -467,9 +527,10 @@ body.mixer main {
   z-index: -1;
   overflow: hidden;
   box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 32%, transparent),
     0 0 0 100vmax var(--card-solid);
-  border-radius: 26px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 7%, transparent);
   cursor: ns-resize;
   touch-action: none;
 }
@@ -479,52 +540,27 @@ body.mixer main {
   bottom: 0;
   width: 100%;
   height: 0;
-  border-radius: 26px;
-  background: linear-gradient(
-    color-mix(in srgb, var(--accent) 50%, transparent),
-    color-mix(in srgb, var(--accent) 34%, transparent)
-  );
-  backdrop-filter: blur(4px) saturate(150%);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 45%),
-    inset 0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent),
-    0 0 18px color-mix(in srgb, var(--accent) 22%, transparent);
+  background: color-mix(in srgb, var(--accent) 42%, transparent);
+  border-top: 3px solid var(--accent);
   transition: height 80ms linear;
-}
-
-/* Sheen down the left side, like light on a glass tube. */
-.fader-fill::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(
-    90deg,
-    rgb(255 255 255 / 14%) 0 14%,
-    rgb(255 255 255 / 2%) 40%,
-    transparent 75%,
-    rgb(255 255 255 / 6%)
-  );
-  pointer-events: none;
 }
 
 .grip {
   position: absolute;
-  z-index: 1;
-  top: 8px;
+  top: 6px;
   left: 50%;
   width: 20px;
-  height: 4px;
+  height: 3px;
   margin-left: -10px;
   border-radius: 2px;
-  background: rgb(255 255 255 / 80%);
+  background: rgb(255 255 255 / 70%);
 }
 
 .meter {
   position: relative;
   overflow: hidden;
-  background: rgb(255 255 255 / 7%);
-  border-radius: 4px;
+  background: rgb(255 255 255 / 6%);
+  border-radius: 3px;
 }
 
 .meter-fill {
@@ -532,84 +568,65 @@ body.mixer main {
   bottom: 0;
   width: 100%;
   height: 0;
-  border-radius: 4px;
-  background: linear-gradient(white, var(--accent));
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 85%, transparent);
   transition: height 60ms linear;
 }
 
 .side {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
+  align-items: stretch;
+  gap: 8px;
   min-width: 0;
   container-type: inline-size;
-}
-
-.steps {
-  display: flex;
-  gap: 10px;
-}
-
-.round {
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: var(--control-fill);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%);
-  font-size: 1.3rem;
-  font-weight: 300;
-  line-height: 1;
-}
-
-.round:hover {
-  background: var(--control-hover);
 }
 
 .value {
   font-family: "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
   /* Shrinks with the column so "100%" always fits a narrow window. */
-  font-size: min(2.55rem, 31cqi);
-  font-weight: 300;
+  font-size: min(1.85rem, 30cqi);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+  text-align: center;
+}
+
+.steps {
+  display: flex;
+  gap: 6px;
+}
+
+.step {
+  flex: 1;
+  min-height: 34px;
+  padding: 0;
+  border: none;
+  font-size: 1.15rem;
+  line-height: 1;
 }
 
 .mute {
-  width: 100%;
-  max-width: 100px;
-  height: 44px;
+  min-height: 38px;
+  margin-top: auto;
   padding: 0;
   border: none;
-  border-radius: 22px;
-  background: var(--control-fill);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 18%);
+  border-radius: 8px;
   font-weight: 600;
-  font-size: 0.88rem;
-}
-
-.mute:hover {
-  background: var(--control-hover);
+  font-size: 0.87rem;
 }
 
 .channel.muted .mute {
-  --edge: linear-gradient(135deg, rgb(255 228 230 / 90%), rgb(253 164 175 / 25%) 50%, rgb(253 164 175 / 50%));
-  background: rgb(244 63 94 / 85%);
-  box-shadow:
-    0 6px 18px rgb(244 63 94 / 40%),
-    inset 0 1px 0 rgb(255 255 255 / 30%);
-  color: white;
+  background: #5c2326;
+  color: #ffaaa4;
+}
+
+.channel.muted .mute:hover {
+  background: #6c2a2e;
 }
 
 .channel.muted .fader-fill {
-  background: linear-gradient(rgb(229 231 235 / 18%), rgb(156 163 175 / 8%));
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 35%),
-    inset 0 0 0 1px rgb(255 255 255 / 18%);
+  background: rgb(138 143 152 / 35%);
+  border-top-color: #8a8f98;
 }
 
 .channel.muted .value {
@@ -624,43 +641,55 @@ body.mixer main {
 
 /* ---- Drop zones and chips ---- */
 
-.dropzone,
-.chips.static {
-  border-radius: 14px;
-  background: rgb(0 0 0 / 18%);
-  box-shadow:
-    inset 0 2px 6px rgb(0 0 0 / 25%),
-    inset 0 -1px 0 rgb(255 255 255 / 10%);
+.dropzone {
+  border-radius: 6px;
   transition:
     background 120ms,
-    box-shadow 120ms;
+    outline-color 120ms;
 }
 
 .dropzone.over {
-  background: color-mix(in srgb, var(--accent, #a78bfa) 18%, transparent);
-  box-shadow:
-    inset 0 0 0 1.5px var(--accent, #a78bfa),
-    inset 0 2px 6px rgb(0 0 0 / 20%);
+  background: color-mix(in srgb, var(--accent, #6cb6ff) 12%, transparent);
+  outline: 2px dashed var(--accent, #6cb6ff);
+  outline-offset: 2px;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
-  gap: 6px;
-  min-height: 72px;
-  padding: 6px;
+  gap: 5px;
 }
 
+/* In a card: a list under a thin line, room for two apps. A fixed height
+   keeps the faders the same length whatever each channel holds. */
 .channel .chips {
+  flex: none;
   flex-direction: column;
   flex-wrap: nowrap;
+  height: 74px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  padding-top: 8px;
+  border-top: 1px solid rgb(255 255 255 / 6%);
+  border-radius: 0;
+}
+
+.channel .dropzone.over {
+  border-radius: 6px;
 }
 
 .chips .empty {
-  margin: auto;
   color: var(--text-faint);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
+}
+
+.channel .chips .empty {
+  display: grid;
+  flex: 1;
+  place-items: center;
+  border: 1px dashed rgb(255 255 255 / 18%);
+  border-radius: 6px;
 }
 
 .chip {
@@ -669,17 +698,16 @@ body.mixer main {
   gap: 8px;
   min-width: 0;
   min-height: 30px;
-  padding: 4px 9px 4px 4px;
-  background: rgb(255 255 255 / 9%);
-  border-radius: 10px;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 12%);
-  font-size: 0.84rem;
+  padding: 4px 8px 4px 5px;
+  background: var(--raised);
+  border-radius: 6px;
+  font-size: 0.82rem;
   cursor: grab;
   user-select: none;
 }
 
 .chip:hover {
-  background: rgb(255 255 255 / 15%);
+  background: #30343a;
 }
 
 .chip.lifted {
@@ -700,12 +728,12 @@ body.mixer main {
   display: grid;
   flex: none;
   place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: var(--accent, #64748b);
-  color: white;
-  font-size: 0.72rem;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent, #8a8f98) 24%, transparent);
+  color: var(--accent, #d3d6db);
+  font-size: 0.68rem;
   font-weight: 700;
 }
 
@@ -714,8 +742,8 @@ body.mixer main {
 }
 
 .chip-icon img {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
 }
 
 .chip-name {
@@ -730,62 +758,68 @@ body.mixer main {
   border-radius: 7px;
   background: rgb(255 255 255 / 10%);
   color: var(--text-dim);
-  font-size: 0.68rem;
+  font-size: 0.66rem;
 }
 
-/* ---- "Ikke styrt" lane and details ---- */
+/* ---- "Not controlled" bar and details ---- */
 
 .lane {
-  margin-top: 16px;
-  padding: 14px 16px 16px;
-  border-radius: 20px;
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 10px;
 }
 
-.lane-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 6px 18px;
-  margin: 0 4px 10px;
+.lane h2 {
+  position: relative;
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
 
 .lane .chips {
-  min-height: 44px;
+  position: relative;
+  flex: 1 1 200px;
+  align-items: center;
+  min-height: 32px;
+  padding: 0;
 }
 
 .lane .chip {
-  max-width: 230px;
+  max-width: 200px;
+  min-height: 28px;
+  padding: 3px 8px 3px 4px;
+}
+
+.lane .hint {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 45%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .details {
-  margin-top: 14px;
-  padding: 12px 20px;
-  border-radius: 16px;
+  flex: none;
+  padding: 8px 14px;
+  border-radius: 10px;
 }
 
 .details summary {
+  position: relative;
   color: var(--text-dim);
+  font-size: 0.85rem;
   cursor: pointer;
 }
 
 /* ---- Chip menu ---- */
 
 .chip-menu {
-  position: fixed;
-  z-index: 10;
-  display: flex;
-  flex-direction: column;
   min-width: 210px;
-  padding: 6px;
-  background: rgb(28 30 42 / 78%);
-  border: 1px solid rgb(255 255 255 / 16%);
-  border-radius: 14px;
-  box-shadow: 0 18px 40px rgb(0 0 0 / 45%);
-  backdrop-filter: blur(30px) saturate(150%);
-}
-
-.chip-menu[hidden] {
-  display: none;
 }
 
 .menu-title {
@@ -801,7 +835,7 @@ body.mixer main {
   padding: 7px 10px;
   background: none;
   border: none;
-  border-radius: 9px;
+  border-radius: 6px;
   text-align: left;
 }
 
@@ -815,24 +849,25 @@ body.mixer main {
 }
 
 .menu-item[aria-checked="true"] {
-  background: rgb(255 255 255 / 12%);
+  background: rgb(255 255 255 / 10%);
   font-weight: 600;
 }
 
 /* ---- Tables (details) ---- */
 
 table {
+  position: relative;
   width: 100%;
-  margin-top: 10px;
+  margin-top: 8px;
   border-collapse: collapse;
 }
 
 th,
 td {
-  padding: 7px 8px;
+  padding: 6px 8px;
   text-align: left;
   border-bottom: 1px solid rgb(255 255 255 / 8%);
-  font-size: 0.86rem;
+  font-size: 0.84rem;
 }
 
 th {

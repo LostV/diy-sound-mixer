@@ -17,29 +17,28 @@
     </div>
 
     <header class="titlebar" data-tauri-drag-region>
+      <span class="app-mark" aria-hidden="true"></span>
       <h1 data-tauri-drag-region>DIY Sound Mixer</h1>
       <div class="header-controls">
-        <label class="glass-pill switch">
-          <input id="autostart" type="checkbox" role="switch" />
-          <span class="track" aria-hidden="true"><span class="knob"></span></span>
-          <span data-i18n="autostart">Start with Windows</span>
-        </label>
-        <label class="glass-pill select-pill">
-          <span class="sr-only" data-i18n="language">Language</span>
-          <select id="language" data-i18n-title="language" title="Language">
-            <option value="en" lang="en">English</option>
-            <option value="no" lang="nb">Norsk</option>
-          </select>
-        </label>
-        <label class="glass-pill select-pill">
-          <span class="sr-only" data-i18n="backdrop">Background</span>
-          <select id="backdrop" data-i18n-title="backdropTitle" title="Window background">
-            <option value="acrylic">Acrylic</option>
-            <option value="mica">Mica</option>
-            <option value="none">Aurora</option>
-          </select>
-        </label>
-        <button id="open-simulator" class="glass-pill strong" type="button">Simulator</button>
+        <button
+          id="open-settings"
+          class="icon-btn"
+          type="button"
+          aria-haspopup="dialog"
+          aria-expanded="false"
+          aria-controls="settings-panel"
+          data-i18n-label="settings"
+          data-i18n-title="settings"
+          aria-label="Settings"
+          title="Settings"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" />
+            <circle cx="16" cy="6" r="2" />
+            <circle cx="10" cy="12" r="2" />
+            <circle cx="18" cy="18" r="2" />
+          </svg>
+        </button>
         <div class="window-buttons">
           <button id="win-min" class="win-btn" type="button" data-i18n-label="minimize" aria-label="Minimize">
             <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 5h8" /></svg>
@@ -55,11 +54,9 @@
       <section id="channels" class="channels" data-i18n-label="channels" aria-label="Channels"></section>
 
       <section class="card lane" aria-labelledby="uncontrolled-title">
-        <div class="lane-head">
-          <h2 id="uncontrolled-title" data-i18n="uncontrolled">Not controlled</h2>
-          <p class="hint" data-i18n="uncontrolledHint">Drag an app here to leave it alone · click an app for more options</p>
-        </div>
+        <h2 id="uncontrolled-title" data-i18n="uncontrolled">Not controlled</h2>
         <div id="uncontrolled" class="dropzone chips" data-target="none"></div>
+        <p class="hint" data-i18n="uncontrolledHint">Drag an app here to leave it alone · click an app for more options</p>
       </section>
 
       <details class="card details">
@@ -78,6 +75,30 @@
       </details>
     </main>
 
-    <div id="chip-menu" class="chip-menu" role="menu" hidden></div>
+    <div id="settings-panel" class="popover settings-panel" role="dialog" data-i18n-label="settings" aria-label="Settings" hidden>
+      <label class="setting switch">
+        <span data-i18n="autostart">Start with Windows</span>
+        <input id="autostart" type="checkbox" role="switch" />
+        <span class="track" aria-hidden="true"><span class="knob"></span></span>
+      </label>
+      <label class="setting">
+        <span data-i18n="language">Language</span>
+        <select id="language">
+          <option value="en" lang="en">English</option>
+          <option value="no" lang="nb">Norsk</option>
+        </select>
+      </label>
+      <label class="setting">
+        <span data-i18n="backdropTitle">Window background</span>
+        <select id="backdrop">
+          <option value="acrylic">Acrylic</option>
+          <option value="mica">Mica</option>
+          <option value="none">Aurora</option>
+        </select>
+      </label>
+      <button id="open-simulator" class="setting-button" type="button">Simulator</button>
+    </div>
+
+    <div id="chip-menu" class="popover chip-menu" role="menu" hidden></div>
   </body>
 </html>
