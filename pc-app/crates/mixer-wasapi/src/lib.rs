@@ -7,6 +7,7 @@ mod icon;
 mod loopback;
 mod policy;
 mod process;
+mod writer;
 
 use std::collections::{HashMap, HashSet};
 
@@ -30,7 +31,9 @@ use windows::{
 };
 
 pub use crate::icon::{icon_png, icon_rgba};
-use crate::{loopback::ProcessMeter, policy::PolicyConfig, process::ProcessCache};
+use crate::{
+    loopback::ProcessMeter, policy::PolicyConfig, process::ProcessCache, writer::SessionWriter,
+};
 
 struct Session {
     pid: u32,
@@ -69,6 +72,8 @@ pub struct WasapiBackend {
     /// `None` when this Windows has no per-app routing we recognise.
     policy: Option<PolicyConfig>,
     processes: ProcessCache,
+    /// Applies session volume and mute off this thread; Windows can be slow.
+    writer: SessionWriter,
     com_initialized: bool,
 }
 
@@ -86,6 +91,7 @@ impl WasapiBackend {
             meters: HashMap::new(),
             policy: PolicyConfig::new(),
             processes: ProcessCache::default(),
+            writer: SessionWriter::new(),
             com_initialized,
         })
     }
@@ -293,18 +299,14 @@ impl AudioBackend for WasapiBackend {
     }
 
     fn set_session_volume(&mut self, session_id: &str, volume: f32) {
-        if let Some(s) = self.sessions.get(session_id)
-            && let Err(e) = unsafe { s.volume.SetMasterVolume(volume, std::ptr::null()) }
-        {
-            log::debug!("set volume on {session_id}: {e}");
+        if let Some(s) = self.sessions.get(session_id) {
+            self.writer.set_volume(session_id, &s.volume, volume);
         }
     }
 
     fn set_session_mute(&mut self, session_id: &str, muted: bool) {
-        if let Some(s) = self.sessions.get(session_id)
-            && let Err(e) = unsafe { s.volume.SetMute(muted, std::ptr::null()) }
-        {
-            log::debug!("set mute on {session_id}: {e}");
+        if let Some(s) = self.sessions.get(session_id) {
+            self.writer.set_mute(session_id, &s.volume, muted);
         }
     }
 
