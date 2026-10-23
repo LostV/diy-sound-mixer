@@ -138,8 +138,7 @@ select option {
 
 /* ---- Mixer window ---- */
 
-/* The body stays transparent so the aurora (z-index -1) shows; the page
-   background lives on <html>. */
+/* The body stays transparent; the page background lives on <html>. */
 body.mixer {
   display: flex;
   flex-direction: column;
@@ -158,59 +157,9 @@ html[data-backdrop="mica"] {
   background: var(--mica-tint);
 }
 
-.aurora {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-html[data-backdrop="acrylic"] .aurora,
-html[data-backdrop="mica"] .aurora {
-  display: none;
-}
-
-.blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(120px);
-}
-
-.blob.purple {
-  left: -12%;
-  top: -20%;
-  width: 54%;
-  height: 72%;
-  background: #7c3aed;
-  opacity: 0.85;
-}
-
-.blob.pink {
-  left: 40%;
-  top: -28%;
-  width: 42%;
-  height: 56%;
-  background: #ec4899;
-  opacity: 0.55;
-}
-
-.blob.teal {
-  left: 62%;
-  top: 48%;
-  width: 56%;
-  height: 76%;
-  background: #06b6d4;
-  opacity: 0.7;
-}
-
-.blob.orange {
-  left: -6%;
-  top: 70%;
-  width: 40%;
-  height: 48%;
-  background: #f97316;
-  opacity: 0.45;
+/* Without a Windows backdrop: a plain dark window, a step below the cards. */
+html[data-backdrop="none"] {
+  background: #121316;
 }
 
 /* ---- Title bar ---- */

@@ -9,13 +9,6 @@
   </head>
 
   <body class="mixer">
-    <div class="aurora" aria-hidden="true">
-      <span class="blob purple"></span>
-      <span class="blob pink"></span>
-      <span class="blob teal"></span>
-      <span class="blob orange"></span>
-    </div>
-
     <header class="titlebar" data-tauri-drag-region>
       <span class="app-mark" aria-hidden="true"></span>
       <h1 data-tauri-drag-region>DIY Sound Mixer</h1>
@@ -93,7 +86,7 @@
         <select id="backdrop">
           <option value="acrylic">Acrylic</option>
           <option value="mica">Mica</option>
-          <option value="none">Aurora</option>
+          <option value="none" data-i18n="backdropSolid">Solid</option>
         </select>
       </label>
       <button id="open-simulator" class="setting-button" type="button">Simulator</button>

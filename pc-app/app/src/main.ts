@@ -133,7 +133,7 @@ function readBackdrop(): Backdrop {
   return "acrylic";
 }
 
-/** `none` paints the aurora ourselves; the others let Windows draw behind the glass. */
+/** `none` is a plain dark window of our own; the others let Windows draw behind the glass. */
 async function applyBackdrop(kind: Backdrop) {
   document.documentElement.dataset.backdrop = kind;
   backdropSelect.value = kind;
