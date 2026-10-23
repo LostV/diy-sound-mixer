@@ -360,7 +360,7 @@ function renderDetails(snapshot: MixerSnapshot) {
 // ---- channels ----
 
 function buildChannel(ch: ChannelSnapshot): ChannelView {
-  const root = el("article", "channel glass");
+  const root = el("article", "channel card");
   root.style.setProperty("--accent", ch.color);
 
   const head = el("div", "channel-head");
@@ -445,7 +445,6 @@ function buildChannel(ch: ChannelSnapshot): ChannelView {
   };
   fader.addEventListener("pointerdown", (e) => {
     fader.setPointerCapture(e.pointerId);
-    fader.focus();
     setLocal(fromPointer(e));
   });
   fader.addEventListener("pointermove", (e) => {

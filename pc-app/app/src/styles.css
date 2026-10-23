@@ -1,4 +1,5 @@
-/* Design A2: edge-lit frosted glass (docs/design/A2-frost-kantlys.png). */
+/* Design A2: solid channel cards with tinted frosted-glass faders, on top of
+   the window backdrop (docs/design/A2-frost-kantlys.png for the original). */
 
 :root {
   --bg: #0a0e1c;
@@ -11,23 +12,19 @@
   --warn: #fcd34d;
   --radius: 22px;
 
-  /* Glass surfaces */
-  /* Frost: how much the cards blur and how dark the window is tinted. Kept
-     light because Windows' Acrylic already blurs the desktop behind. */
-  --frost-blur: 14px;
+  /* How dark the window backdrop is tinted. Kept light because Windows'
+     Acrylic already blurs the desktop behind. */
   --acrylic-tint: rgb(8 10 22 / 24%);
   --mica-tint: rgb(8 10 22 / 14%);
-  --glass-fill: linear-gradient(rgb(255 255 255 / 10%), rgb(255 255 255 / 3%));
-  --glass-edge: linear-gradient(
-    135deg,
-    rgb(255 255 255 / 70%),
-    rgb(255 255 255 / 10%) 35%,
-    rgb(255 255 255 / 5%) 65%,
-    rgb(255 255 255 / 35%)
-  );
+  /* Solid cards */
+  --card-fill: linear-gradient(#242939, #1a1e2c);
+  /* Flat card colour for the channel cards, painted around the fader. */
+  --card-solid: #1f2332;
+  --card-edge: linear-gradient(160deg, rgb(255 255 255 / 16%), rgb(255 255 255 / 4%) 40%, rgb(255 255 255 / 6%));
+  --card-shadow: 0 14px 34px rgb(0 0 0 / 40%), inset 0 1px 0 rgb(255 255 255 / 8%);
+
+  /* Glass controls */
   --glass-edge-soft: linear-gradient(135deg, rgb(255 255 255 / 55%), rgb(255 255 255 / 7%) 50%, rgb(255 255 255 / 20%));
-  --glass-shadow:
-    0 16px 40px rgb(0 0 0 / 35%), inset 0 1px 1px rgb(255 255 255 / 25%), inset 0 0 28px rgb(255 255 255 / 9%);
   --control-fill: rgb(255 255 255 / 8%);
   --control-hover: rgb(255 255 255 / 14%);
 
@@ -108,9 +105,9 @@ select {
   white-space: nowrap;
 }
 
-/* ---- Glass ---- */
+/* ---- Cards and glass controls ---- */
 
-.glass,
+.card,
 .glass-pill,
 .select-pill,
 .round,
@@ -121,7 +118,7 @@ select {
 }
 
 /* Edge-lit border: a gradient ring drawn with a mask, bright top-left. */
-.glass::before,
+.card::before,
 .glass-pill::before,
 .select-pill::before,
 .round::before,
@@ -141,13 +138,11 @@ select {
   pointer-events: none;
 }
 
-.glass {
-  --edge: var(--glass-edge);
-  --edge-width: 1.5px;
-  background: var(--glass-fill);
+.card {
+  --edge: var(--card-edge);
+  background: var(--card-fill);
   border-radius: var(--radius);
-  box-shadow: var(--glass-shadow);
-  backdrop-filter: blur(var(--frost-blur)) saturate(130%);
+  box-shadow: var(--card-shadow);
 }
 
 .glass-pill,
@@ -388,12 +383,22 @@ body.mixer main {
   gap: 14px;
 }
 
+/* The fader is a window through the card: the card has no background of
+   its own, the fader paints the card colour around itself with a huge
+   shadow (clipped to the card), and sits under the rest of the content. */
 .channel {
   display: flex;
   flex-direction: column;
   gap: 14px;
   min-width: 0;
   padding: 16px 16px 14px;
+  overflow: hidden;
+  background: none;
+}
+
+/* Keep the edge light above the painted card colour. */
+.channel::before {
+  z-index: 0;
 }
 
 .channel-head {
@@ -445,11 +450,25 @@ body.mixer main {
   height: 274px;
 }
 
+/* The fader sits below this box (z-index -1), so let clicks through the box
+   itself but not through what is in it. */
+.body {
+  pointer-events: none;
+}
+
+.body > * {
+  pointer-events: auto;
+}
+
+/* No background: the window behind shows through, a faint outline marks
+   the range, and the fill is a see-through tint of the channel colour. */
 .fader {
   position: relative;
+  z-index: -1;
   overflow: hidden;
-  background: rgb(255 255 255 / 6%);
-  border: 1px solid rgb(255 255 255 / 10%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent),
+    0 0 0 100vmax var(--card-solid);
   border-radius: 26px;
   cursor: ns-resize;
   touch-action: none;
@@ -461,13 +480,37 @@ body.mixer main {
   width: 100%;
   height: 0;
   border-radius: 26px;
-  background: linear-gradient(color-mix(in srgb, var(--accent) 38%, white), var(--accent));
-  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 45%, transparent);
+  background: linear-gradient(
+    color-mix(in srgb, var(--accent) 50%, transparent),
+    color-mix(in srgb, var(--accent) 34%, transparent)
+  );
+  backdrop-filter: blur(4px) saturate(150%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 45%),
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 70%, transparent),
+    0 0 18px color-mix(in srgb, var(--accent) 22%, transparent);
   transition: height 80ms linear;
+}
+
+/* Sheen down the left side, like light on a glass tube. */
+.fader-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    rgb(255 255 255 / 14%) 0 14%,
+    rgb(255 255 255 / 2%) 40%,
+    transparent 75%,
+    rgb(255 255 255 / 6%)
+  );
+  pointer-events: none;
 }
 
 .grip {
   position: absolute;
+  z-index: 1;
   top: 8px;
   left: 50%;
   width: 20px;
@@ -563,15 +606,19 @@ body.mixer main {
 }
 
 .channel.muted .fader-fill {
-  background: linear-gradient(rgb(229 231 235 / 40%), rgb(156 163 175 / 25%));
-  box-shadow: none;
+  background: linear-gradient(rgb(229 231 235 / 18%), rgb(156 163 175 / 8%));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 35%),
+    inset 0 0 0 1px rgb(255 255 255 / 18%);
 }
 
 .channel.muted .value {
   opacity: 0.45;
 }
 
-.channel.unavailable .body {
+/* Not on .body itself: opacity there would lift the fader's card paint
+   above the card head. */
+.channel.unavailable :is(.fader-fill, .meter, .side) {
   opacity: 0.5;
 }
 
