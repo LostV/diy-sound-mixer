@@ -40,7 +40,7 @@ Not started: the Pico firmware for the knobs, the screen firmware on the actual 
 
 | PC app | Screen UI (simulator) |
 |---|---|
-| <img src="docs/screenshots/app.png" alt="The PC app: four channel cards (Game, Media, Chat, Mic) with faders, output pickers and app chips"> | <img src="docs/screenshots/screen.png" alt="The screen UI in the simulator: four channels with volume rings, connected to the app"> |
+| <img src="docs/screenshots/mixer-window.png" alt="The PC app: four channel cards (Game, Media, Chat, Mic) with faders, output pickers and app chips"> | <img src="docs/screenshots/screen.png" alt="The screen UI in the simulator: four channels with volume rings, connected to the app"> |
 
 ## Hardware
 
