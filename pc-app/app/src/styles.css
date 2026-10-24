@@ -731,6 +731,7 @@ body.mixer main {
 .lane .chips {
   position: relative;
   flex: 1 1 200px;
+  align-content: center;
   align-items: center;
   min-height: 32px;
   padding: 0;
