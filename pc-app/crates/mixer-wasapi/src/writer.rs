@@ -5,6 +5,10 @@
 //! the mixer thread that froze the meters and made a fader drag play back
 //! for seconds. Here only the newest value per session is kept, so however
 //! slow Windows is, it ends on the value the user let go at.
+//!
+//! Each write can also cost ~60 MB of kernel memory (ETW notification data,
+//! freed over minutes; seen on a Windows 11 machine with an Astro A50), so
+//! values Windows already has are never written again.
 
 use std::{
     collections::HashMap,
@@ -114,12 +118,20 @@ fn run(shared: &Shared) {
         };
         for (id, pending) in batch {
             let control = &pending.control.0;
+            // Reading is free; writing is the expensive part, so skip it when
+            // Windows already has the value (e.g. after a restart).
             if let Some(volume) = pending.volume
+                && unsafe { control.GetMasterVolume() }
+                    .ok()
+                    .is_none_or(|v| (v - volume).abs() > 0.001)
                 && let Err(e) = unsafe { control.SetMasterVolume(volume, std::ptr::null()) }
             {
                 log::debug!("set volume on {id}: {e}");
             }
             if let Some(muted) = pending.muted
+                && unsafe { control.GetMute() }
+                    .ok()
+                    .is_none_or(|m| m.as_bool() != muted)
                 && let Err(e) = unsafe { control.SetMute(muted, std::ptr::null()) }
             {
                 log::debug!("set mute on {id}: {e}");

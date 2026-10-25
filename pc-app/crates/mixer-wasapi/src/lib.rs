@@ -38,6 +38,11 @@ use crate::{
 struct Session {
     pid: u32,
     active: bool,
+    /// Not playing right now. Volume and mute for it wait in `deferred`
+    /// until it plays: every write costs Windows ~0.5 s and, on some
+    /// systems, ~60 MB of kernel memory, and idle sessions are most of them.
+    /// System sounds never wait; their sounds are over before a rescan.
+    idle: bool,
     volume: ISimpleAudioVolume,
     /// Windows' own session meter. Only a fallback: on some devices it reports
     /// the whole device's level, see `loopback`.
@@ -48,6 +53,13 @@ enum Meter {
     Running(ProcessMeter),
     /// Loopback capture was refused for this process; don't retry every scan.
     Failed,
+}
+
+/// Volume and mute waiting for an idle session to start playing.
+#[derive(Default)]
+struct Deferred {
+    volume: Option<f32>,
+    muted: Option<bool>,
 }
 
 struct Device {
@@ -66,6 +78,8 @@ pub struct WasapiBackend {
     enumerator: IMMDeviceEnumerator,
     devices: HashMap<String, Device>,
     sessions: HashMap<String, Session>,
+    /// Writes held back for idle sessions, keyed by session id.
+    deferred: HashMap<String, Deferred>,
     capture: Option<(String, Capture)>,
     /// Per-process level meters, keyed by pid.
     meters: HashMap<u32, Meter>,
@@ -87,6 +101,7 @@ impl WasapiBackend {
             enumerator,
             devices: HashMap::new(),
             sessions: HashMap::new(),
+            deferred: HashMap::new(),
             capture: None,
             meters: HashMap::new(),
             policy: PolicyConfig::new(),
@@ -165,6 +180,7 @@ impl WasapiBackend {
                 Session {
                     pid,
                     active: state == AudioSessionStateActive && !is_system_sounds,
+                    idle: state != AudioSessionStateActive && !is_system_sounds,
                     volume: control.cast()?,
                     meter: control.cast()?,
                 },
@@ -214,6 +230,29 @@ impl WasapiBackend {
                     }
                 });
         }
+    }
+
+    /// Hands held-back writes to the writer for sessions that started
+    /// playing (or for every session with `all`, on exit, so nothing is left
+    /// at an old volume), and forgets those for sessions that are gone.
+    fn flush_deferred(&mut self, all: bool) {
+        let sessions = &self.sessions;
+        let writer = &self.writer;
+        self.deferred.retain(|id, deferred| {
+            let Some(session) = sessions.get(id) else {
+                return false;
+            };
+            if session.idle && !all {
+                return true;
+            }
+            if let Some(volume) = deferred.volume {
+                writer.set_volume(id, &session.volume, volume);
+            }
+            if let Some(muted) = deferred.muted {
+                writer.set_mute(id, &session.volume, muted);
+            }
+            false
+        });
     }
 
     fn capture_endpoints(&self) -> Result<Vec<(IMMDevice, String)>> {
@@ -283,6 +322,7 @@ impl AudioBackend for WasapiBackend {
         }
         self.devices = devices;
         self.sessions = handles;
+        self.flush_deferred(false);
         self.processes.retain(out.iter().map(|s| s.pid));
         self.refresh_meters();
         out
@@ -299,14 +339,28 @@ impl AudioBackend for WasapiBackend {
     }
 
     fn set_session_volume(&mut self, session_id: &str, volume: f32) {
-        if let Some(s) = self.sessions.get(session_id) {
-            self.writer.set_volume(session_id, &s.volume, volume);
+        match self.sessions.get(session_id) {
+            Some(s) if s.idle => {
+                self.deferred
+                    .entry(session_id.to_owned())
+                    .or_default()
+                    .volume = Some(volume);
+            }
+            Some(s) => self.writer.set_volume(session_id, &s.volume, volume),
+            None => {}
         }
     }
 
     fn set_session_mute(&mut self, session_id: &str, muted: bool) {
-        if let Some(s) = self.sessions.get(session_id) {
-            self.writer.set_mute(session_id, &s.volume, muted);
+        match self.sessions.get(session_id) {
+            Some(s) if s.idle => {
+                self.deferred
+                    .entry(session_id.to_owned())
+                    .or_default()
+                    .muted = Some(muted);
+            }
+            Some(s) => self.writer.set_mute(session_id, &s.volume, muted),
+            None => {}
         }
     }
 
@@ -385,6 +439,7 @@ impl AudioBackend for WasapiBackend {
 
 impl Drop for WasapiBackend {
     fn drop(&mut self) {
+        self.flush_deferred(true);
         self.policy = None;
         self.meters.clear();
         self.sessions.clear();
