@@ -312,6 +312,10 @@ impl AudioBackend for WasapiBackend {
         if let Err(e) = self.refresh_devices() {
             log::warn!("enumerating output devices: {e}");
         }
+        // Let go of last scan's sessions first: enumerating while still
+        // holding any of them leaks ~1 KB per held session per scan in
+        // Windows' audio client code (and memory in Windows Audio with it).
+        self.sessions.clear();
         let devices = std::mem::take(&mut self.devices);
         let mut out = Vec::new();
         let mut handles = HashMap::new();
