@@ -42,6 +42,10 @@ Not started: the Pico firmware for the knobs, the screen firmware on the actual 
 |---|---|
 | <img src="docs/screenshots/mixer-window.png" alt="The PC app: four channel cards (Game, Media, Chat, Mic) with faders, output pickers and app chips"> | <img src="docs/screenshots/screen.png" alt="The screen UI in the simulator: four channels with volume rings, connected to the app"> |
 
+## Download
+
+Get the installer from the [latest release](https://github.com/LostV/diy-sound-mixer/releases/latest). The app works without the hardware, as a per-app mixer in the window and the tray. It needs Windows 11, and SmartScreen will warn about an unknown publisher because the installer isn't code-signed: click **More info**, then **Run anyway**.
+
 ## Hardware
 
 | Part | Job |
