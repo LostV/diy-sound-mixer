@@ -26,6 +26,7 @@ tauri-plugin-autostart = "2"
 tauri-plugin-single-instance = "2"
 base64 = "0.22"
 sys-locale = "0.3"
+serialport = "4"
 
 [target.'cfg(windows)'.dependencies]
 mixer-wasapi.workspace = true

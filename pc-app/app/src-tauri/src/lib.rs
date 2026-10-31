@@ -1,4 +1,5 @@
 mod links;
+mod serial;
 mod tray;
 
 use std::sync::{Arc, Mutex};
@@ -294,7 +295,8 @@ pub fn run() {
                 publish(&handle, &devices, &publish_links, snapshot);
             });
             app.manage(Host(Mutex::new(Some(host))));
-            links::listen(app.handle().clone(), links);
+            links::listen(app.handle().clone(), links.clone());
+            serial::watch(app.handle().clone(), links);
 
             tray::build(app.handle(), language)?;
             // The autostart entry stores the exe path; rewrite it so it

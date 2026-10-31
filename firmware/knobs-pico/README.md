@@ -53,4 +53,6 @@ arduino-cli monitor -p COMx -c baudrate=115200
 
 The Pico sends `hello` when the port opens. Each turn and press prints a line and flashes the on-board LED. Type `{"t":"led","id":0,"on":true}` and press Enter to light mute LED 0.
 
-The port only delivers data when the PC sets DTR. arduino-cli and the Arduino IDE do this; a PC app must do it too.
+The port only delivers data when the PC sets DTR. arduino-cli, the Arduino IDE and the mixer app all do this.
+
+Only one program can have the port open. The mixer app connects to the Pico by itself, so quit it before using `arduino-cli monitor` or `upload`.
