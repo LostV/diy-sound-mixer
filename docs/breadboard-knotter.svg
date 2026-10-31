@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 700" font-family="Segoe UI, Arial, sans-serif" font-size="12">
-<rect width="860" height="700" fill="#ffffff"/>
-<text x="430" y="26" text-anchor="middle" font-size="17" font-weight="600" fill="#111">Breadboard sett ovenfra – kanal 0 (rad 1–30)</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 780" font-family="Segoe UI, Arial, sans-serif" font-size="12">
+<rect width="860" height="780" fill="#ffffff"/>
+<text x="430" y="26" text-anchor="middle" font-size="17" font-weight="600" fill="#111">Breadboard sett ovenfra – knott 0 og mic-mute (rad 1–30)</text>
 <rect x="286" y="48" width="346" height="566" rx="6" fill="#f5f5f0" stroke="#bbb"/>
 <rect x="450" y="48" width="18" height="566" fill="#e7e5df"/>
 <line x1="291" y1="56" x2="291" y2="606" stroke="#dc2626" stroke-width="2"/>
@@ -492,19 +492,19 @@
 <circle cx="522" cy="304" r="4" fill="#c9a961"/>
 <circle cx="396" cy="322" r="4" fill="#c9a961"/>
 <circle cx="522" cy="322" r="4" fill="#c9a961"/>
-<circle cx="396" cy="340" r="4" fill="#fbbf24"/>
-<circle cx="522" cy="340" r="4" fill="#c9a961"/>
-<text x="405" y="344" fill="#fff" font-size="10">ben 16 GP12</text>
+<circle cx="396" cy="340" r="4" fill="#c9a961"/>
+<circle cx="522" cy="340" r="4" fill="#fbbf24"/>
 <circle cx="396" cy="358" r="4" fill="#c9a961"/>
 <circle cx="522" cy="358" r="4" fill="#c9a961"/>
 <circle cx="396" cy="376" r="4" fill="#c9a961"/>
 <circle cx="522" cy="376" r="4" fill="#fbbf24"/>
 <circle cx="396" cy="394" r="4" fill="#c9a961"/>
 <circle cx="522" cy="394" r="4" fill="#c9a961"/>
-<circle cx="396" cy="412" r="4" fill="#c9a961"/>
-<circle cx="522" cy="412" r="4" fill="#fbbf24"/>
+<circle cx="396" cy="412" r="4" fill="#fbbf24"/>
+<circle cx="522" cy="412" r="4" fill="#c9a961"/>
+<text x="405" y="416" fill="#fff" font-size="10">ben 20 GP15</text>
 <text x="513" y="380" text-anchor="end" fill="#fff" font-size="10">ben 23 GND</text>
-<text x="513" y="416" text-anchor="end" fill="#fff" font-size="10">ben 21 GP16</text>
+<text x="513" y="344" text-anchor="end" fill="#fff" font-size="10">ben 25 GP19</text>
 <text x="459.0" y="232" text-anchor="middle" fill="#fff" font-size="12" font-weight="600" transform="rotate(-90 459.0 232)">Pico 2 W</text>
 <path d="M378 106 L318 106" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 <circle cx="378" cy="106" r="4" fill="#111"/>
@@ -535,40 +535,38 @@
 <path d="M170 200 L260 200 L260 214 L318 214" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
 <circle cx="170" cy="200" r="4" fill="#111"/>
 <circle cx="318" cy="214" r="4" fill="#111"/>
-<rect x="110" y="330" width="50" height="50" rx="4" fill="#111"/><circle cx="135" cy="355" r="13" fill="#374151"/>
-<text x="135" y="320" text-anchor="middle" font-weight="600" fill="#111">Mute-knapp 0</text>
-<text x="135" y="398" text-anchor="middle" fill="#4b5563" font-size="11">to ben på skrå</text>
-<path d="M160 334 L250 334 L250 340 L360 340" fill="none" stroke="#2563eb" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<circle cx="160" cy="334" r="4" fill="#2563eb"/>
-<circle cx="360" cy="340" r="4" fill="#2563eb"/>
-<path d="M160 376 L318 376" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<circle cx="160" cy="376" r="4" fill="#111"/>
-<circle cx="318" cy="376" r="4" fill="#111"/>
-<line x1="558" y1="412" x2="558" y2="502" stroke="#888" stroke-width="2"/>
-<rect x="552" y="432" width="12" height="50" rx="5" fill="#d6b48a" stroke="#78350f"/>
-<rect x="552" y="438" width="12" height="3" fill="#dc2626"/>
-<rect x="552" y="445" width="12" height="3" fill="#dc2626"/>
-<rect x="552" y="452" width="12" height="3" fill="#78350f"/>
-<circle cx="558" cy="412" r="4" fill="#888"/>
-<circle cx="558" cy="502" r="4" fill="#888"/>
-<line x1="568" y1="448" x2="644" y2="448" stroke="#999" stroke-dasharray="3 3"/>
-<text x="648" y="452" fill="#111" font-size="11">220 Ω fra J20 til J25</text>
-<text x="760" y="492" text-anchor="middle" font-weight="600" fill="#111">Mute-LED 0</text>
-<text x="760" y="506" text-anchor="middle" fill="#4b5563" font-size="11">(rød LED-knapp)</text>
-<rect x="735" y="518" width="50" height="50" rx="4" fill="#111"/><circle cx="760" cy="543" r="13" fill="#ef4444"/>
-<path d="M735 526 L690 526 L690 502 L540 502" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<circle cx="735" cy="526" r="4" fill="#dc2626"/>
+<rect x="440" y="670" width="60" height="60" rx="5" fill="#111"/><circle cx="470" cy="700" r="17" fill="#ef4444"/>
+<text x="470" y="750" text-anchor="middle" font-weight="600" fill="#111">Mic-mute (rød LED-knapp)</text>
+<path d="M440 678 L250 678 L250 412 L360 412" fill="none" stroke="#7c3aed" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="440" cy="678" r="4" fill="#7c3aed"/>
+<circle cx="360" cy="412" r="4" fill="#7c3aed"/>
+<text x="434" y="674" text-anchor="end" font-size="11" fill="#374151">hjørnebein → A20</text>
+<path d="M440 722 L318 722 L318 574" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="440" cy="722" r="4" fill="#111"/>
+<circle cx="318" cy="574" r="4" fill="#111"/>
+<text x="434" y="718" text-anchor="end" font-size="11" fill="#374151">hjørnebein på skrå → GND</text>
+<path d="M500 678 L680 678 L680 502 L540 502" fill="none" stroke="#dc2626" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="500" cy="678" r="4" fill="#dc2626"/>
 <circle cx="540" cy="502" r="4" fill="#dc2626"/>
-<text x="730" y="522" text-anchor="end" font-size="12" fill="#111">+</text>
-<path d="M735 562 L618 562" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<circle cx="735" cy="562" r="4" fill="#111"/>
-<circle cx="618" cy="562" r="4" fill="#111"/>
-<text x="730" y="558" text-anchor="end" font-size="12" fill="#111">−</text>
+<text x="506" y="674" font-size="11" fill="#374151">LED + (blank side) → I25</text>
+<path d="M500 722 L618 722 L618 574" fill="none" stroke="#111" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="500" cy="722" r="4" fill="#111"/>
+<circle cx="618" cy="574" r="4" fill="#111"/>
+<text x="506" y="718" font-size="11" fill="#374151">LED − (rød side) → GND</text>
+<line x1="558" y1="340" x2="558" y2="502" stroke="#888" stroke-width="2"/>
+<rect x="552" y="396" width="12" height="68" rx="5" fill="#d6b48a" stroke="#78350f"/>
+<rect x="552" y="404" width="12" height="3" fill="#dc2626"/>
+<rect x="552" y="413" width="12" height="3" fill="#dc2626"/>
+<rect x="552" y="422" width="12" height="3" fill="#78350f"/>
+<circle cx="558" cy="340" r="4" fill="#888"/>
+<circle cx="558" cy="502" r="4" fill="#888"/>
+<line x1="568" y1="430" x2="644" y2="430" stroke="#999" stroke-dasharray="3 3"/>
+<text x="648" y="434" fill="#111" font-size="11">220 Ω fra J16 til J25</text>
 <text x="40" y="466" font-weight="600" fill="#111">Hull</text>
 <text x="40" y="484" fill="#111" font-size="11"><tspan font-weight="600">A1</tspan>  knott 0, ben A (gul)</text>
 <text x="40" y="500" fill="#111" font-size="11"><tspan font-weight="600">A2</tspan>  knott 0, ben B (grønn)</text>
 <text x="40" y="516" fill="#111" font-size="11"><tspan font-weight="600">A4</tspan>  knott 0, trykknapp (blå)</text>
-<text x="40" y="532" fill="#111" font-size="11"><tspan font-weight="600">A16</tspan>  mute-knapp 0 (blå)</text>
+<text x="40" y="532" fill="#111" font-size="11"><tspan font-weight="600">A20</tspan>  mic-mute-knappen (lilla)</text>
 <text x="40" y="548" fill="#111" font-size="11"><tspan font-weight="600">B3 → venstre −</tspan>  GND-bro</text>
 <text x="40" y="564" fill="#111" font-size="11"><tspan font-weight="600">I18 → høyre −</tspan>  GND-bro</text>
 <text x="40" y="580" fill="#111" font-size="11"><tspan font-weight="600">I25</tspan>  LED + (rød)</text>

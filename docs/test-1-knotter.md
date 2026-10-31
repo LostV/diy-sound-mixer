@@ -1,6 +1,6 @@
 # Test 1 – knottene på breadboard
 
-Mål: når du vrir på en knott, kommer det en linje på PC-en, og det lille lyset på Pico-en blinker. Til slutt virker alle 4 knottene, alle mute-knappene og mute-lampen.
+Mål: når du vrir på en knott, kommer det en linje på PC-en, og det lille lyset på Pico-en blinker. Til slutt virker alle 4 knottene og mic-mute-knappen med lys.
 
 Ingen lodding trengs. Fastvaren ligger i [firmware/knobs-pico](../firmware/knobs-pico/).
 
@@ -21,8 +21,7 @@ Ingen lodding trengs. Fastvaren ligger i [firmware/knobs-pico](../firmware/knobs
 |---|---|
 | Pico 2 WH | 1 |
 | Encoder (knott) | 1, senere 4 |
-| Taktil knapp (svart) | 1 |
-| Rød LED-knapp | 1 |
+| Rød LED-knapp (mic-mute) | 1 |
 | Motstand 220 Ω (fargene rød–rød–brun) | 1 |
 | Myke han-han-ledninger (65-pakken) | 2 |
 | Han-hun-ledninger (hunn i én ende) | 9 |
@@ -97,42 +96,43 @@ Du skal se linjer som `{"t":"enc","ch":0,"d":1}` (ett klikk med klokka), `"d":-1
 
 Dra ut USB-kabelen før neste steg.
 
-## Steg 7 – Mute-knapp 0
+## Steg 7 – Mic-mute-knappen
 
-Den svarte taktile knappen har 4 bein, 2 på hver side. Inni knappen er beina koblet sammen to og to, så du bruker bare 2 av dem. To bein **på skrå**, i hvert sitt hjørne, virker alltid. De to andre beina står ubrukt.
+Hver kanal mutes med et trykk på knotten (eller på skjermen senere), så vi har bare **én** egen knapp: en mic-mute-knapp med rødt lys. Den kan brukes i blinde, og lyset viser at mikrofonen er av. Det er den **røde LED-knappen**. Den svarte knappen trengs ikke.
 
-| Knappebein | Han-enden går i |
+LED-knappen har 6 bein:
+
+- De **4 bøyde beina i hjørnene** er selve knappen. Inni er de koblet sammen to og to, så du bruker bare 2 av dem: to bein **på skrå**, i hvert sitt hjørne. De to andre står ubrukt.
+- De **2 rette beina i midten** er lampen. Beinet ved den **blanke** siden er **+**, og beinet ved den **rødmerkede** siden er **−** (testet på knappene fra Electrokit).
+
+**Knappen** (venstre side):
+
+| Bein | Går i |
 |---|---|
-| Ett hjørne | **A16** |
-| Motsatt hjørne (på skrå) | **venstre blå skinne** |
+| Ett hjørnebein | **A20** (ben 20, GP15) |
+| Hjørnebeinet på skrå | **venstre blå skinne** |
 
-Test: plugg i USB og trykk på knappen. Lyset på Pico-en blinker. Dra ut USB-en igjen.
+**Lampen** (høyre side):
 
-## Steg 8 – Mute-lampe 0
-
-Lampen sitter i den **røde LED-knappen**. Den har 6 bein: de 4 bøyde i hjørnene er knappen, og de 2 rette i midten er LED-en. Bryterbeina bruker vi ikke nå. På knappene fra Electrokit er LED-beinet ved den **blanke** siden **+**, og beinet ved den **rødmerkede** siden er **−** (testet).
-
-1. **Motstanden** (220 Ω): bøy beina ned og sett den i **J20** og **J25**. Rad 20 på høyre side er ben 21, som er GP16. Det spiller ingen rolle hvilken vei den står.
+1. **Motstanden** (220 Ω, rød–rød–brun): bøy beina ned og sett den i **J16** og **J25**. Rad 16 på høyre side er ben 25, som er GP19. Det spiller ingen rolle hvilken vei den står.
 2. **GND på høyre side:** én myk han-han-ledning fra **I18** til den **blå skinnen til høyre** (den ytterste). Rad 18 på høyre side er ben 23, som er GND.
-3. **LED +**: han-hun-ledning fra LED-beinet ved den blanke siden til **I25**.
-4. **LED −**: han-hun-ledning fra LED-beinet ved den rødmerkede siden til **høyre blå skinne**.
+3. **LED +**: han-hun-ledning fra beinet ved den blanke siden til **I25**.
+4. **LED −**: han-hun-ledning fra beinet ved den rødmerkede siden til **høyre blå skinne**.
 
-Test: plugg i USB og si fra, så slår jeg lampen av og på fra PC-en. Lyser den ikke, snur du de to LED-ledningene.
+Test: plugg i USB, trykk på knappen og si fra. Jeg sjekker at trykket kommer frem som `mute3`, og slår lampen av og på fra PC-en. Lyser den ikke, snur du de to LED-ledningene.
 
-## Steg 9 – Resten av knottene
+## Steg 8 – Resten av knottene
 
-Når alt over virker, er kanal 0 ferdig. De tre andre knottene kobles på samme måte, bare i andre rader. Hold knotten likt som knott 0, og ha samme farger på de samme beina, så teller alle riktig vei. Alle C-bein og de andre trykknappbeina går til **venstre blå skinne**, akkurat som for knott 0.
+Når knott 0 virker, kobles de tre andre på samme måte, bare i andre rader. Hold knotten likt som knott 0, og ha samme farger på de samme beina, så teller alle riktig vei. Alle C-bein og de andre trykknappbeina går til **venstre blå skinne**, akkurat som for knott 0.
 
-| Kanal | A går i | B går i | Trykknapp går i | Mute-knapp går i |
-|---|---|---|---|---|
-| 0 Spill | A1 | A2 | A4 | A16 |
-| 1 Media | A5 | A6 | A7 | A17 |
-| 2 Chat | A9 | A10 | A11 | A19 |
-| 3 Mic | A12 | A14 | A15 | A20 |
+| Kanal | A går i | B går i | Trykknapp går i |
+|---|---|---|---|
+| 0 Spill | A1 | A2 | A4 |
+| 1 Media | A5 | A6 | A7 |
+| 2 Chat | A9 | A10 | A11 |
+| 3 Mic | A12 | A14 | A15 |
 
 Rad 8, 13 og 18 til venstre er GND-ben, så de hoppes over.
-
-Du har én LED-knapp til. Den kan bli mute-lampe 1: motstand fra **I19** til **I23** (ved siden av den første motstanden), LED + i **J23** og LED − i høyre blå skinne.
 
 Test hver knott for seg før du kobler den neste. Si fra når alle 4 er koblet, så sjekker jeg alle kanalene.
 
@@ -147,5 +147,5 @@ Test hver knott for seg før du kobler den neste. Si fra når alle 4 er koblet, 
 | Lyset blinker hele tiden, eller av seg selv | En hunnkontakt sitter løst. Klem den sammen eller bytt ledning. |
 | Feil retning | Bytt ledningene i A1 og A2. |
 | Ett klikk gir to linjer, eller to klikk gir én | Si fra, så endrer jeg én innstilling i fastvaren. |
-| Mute-knappen er «trykket» hele tiden, eller reagerer ikke | Du har brukt to bein som er koblet sammen inni knappen. Bruk to bein på skrå. |
-| LED-en lyser ikke | Snu de to LED-ledningene. Sjekk at motstanden står i J20 og J25. |
+| Mic-mute-knappen er «trykket» hele tiden, eller reagerer ikke | Du har brukt to hjørnebein som er koblet sammen inni knappen. Bruk to bein på skrå. |
+| LED-en lyser ikke | Snu de to LED-ledningene. Sjekk at motstanden står i J16 og J25. |
