@@ -1,12 +1,12 @@
 # Handleliste – prototype A (én stor skjerm)
 
-## Bestillingsstatus (2026-10-22)
+## Bestillingsstatus (oppdatert 2026-10-31)
 
 | Butikk | Status | Innhold |
 |---|---|---|
-| Elecrow | Bestilt | CrowPanel 5" ESP32-S3 (DDP, $43,58) |
-| Electrokit | Bestilt | Pico 2 WH, 6× encoder 41017819, 6× taktil knapp, 4× hette, 2× LED-knapp rød, 10× 220 Ω, breadboard, kabler, loddetinn, flussgel, loddeveke |
-| AliExpress | Bestilt | Krympestrømpe 780 stk., knotter D 30×17 mm (2 pk. à 2 = 4 stk.), GH1.25 4P single head, MX1.25 4P single head |
+| Elecrow | Bestilt, ikke kommet | CrowPanel 5" ESP32-S3 (DDP, $43,58) |
+| Electrokit | **Mottatt** 2026-10-31 | Pico 2 WH, 6× encoder 41017819, 6× taktil knapp, 4× hette, 2× LED-knapp rød, 10× 220 Ω, breadboard, kabler, loddetinn, flussgel, loddeveke |
+| AliExpress | Bestilt, ikke kommet | Krympestrømpe 780 stk., knotter D 30×17 mm (2 pk. à 2 = 4 stk.), GH1.25 4P single head, MX1.25 4P single head |
 | – | Valgfritt senere | Tastatur-switcher til mute-knapper (ferdig bygg), avisoleringstang |
 
 Kanaler: **Spill, Media, Chat, Mic**. Det gir 4 knotter og 4 mute-knapper (trykk på knotten = mute, i tillegg til egne knapper).
@@ -107,7 +107,7 @@ Alt her gjenbrukes i det ferdige bygget.
 
 ## Når pakkene kommer – første test
 
-1. **Knotter:** Koble Pico 2 + 1 encoder på breadboard. Mål: tallet øker og minker i en seriell konsoll når du vrir. Utvid deretter til 4 encodere og mute-knappene.
+1. **Knotter:** Koble Pico 2 + 1 encoder på breadboard ([guide](test-1-knotter.md)). Mål: tallet øker og minker i en seriell konsoll når du vrir. Utvid deretter til 4 encodere og mute-knappene.
 2. **Skjerm:** Flash et testprogram til CrowPanel 5". Mål: en LVGL-demo med berøring, deretter en enkel mikser-skisse med 4 kanaler.
 3. **PC-app v0:** knott → volumet til én app (f.eks. Spotify), og en mute-knapp → mute mikrofonen.
 4. **Sammenkobling:** PC-appen sender kanalnavn og nivåer til skjermen, og knottene oppdaterer skjermen i sanntid.

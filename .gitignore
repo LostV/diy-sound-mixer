@@ -11,6 +11,7 @@ pc-app/app/src-tauri/gen/schemas/
 # PlatformIO (firmware) and the CMake simulator build
 .pio/
 build-sim/
+firmware/knobs-pico/build/
 
 # Editor / OS
 .vs/
