@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 360" font-family="Segoe UI, Arial, sans-serif" font-size="12">
+<rect width="680" height="360" fill="#ffffff"/>
+<text x="340" y="26" text-anchor="middle" font-size="17" font-weight="600" fill="#111">Rød LED-knapp – mål (1 mm = 10 px)</text>
+<!-- top view -->
+<text x="110" y="56" text-anchor="middle" font-weight="600" fill="#111">Ovenfra</text>
+<rect x="50" y="80" width="120" height="120" rx="3" fill="#374151"/>
+<rect x="35" y="132.5" width="150" height="15" fill="#f3f4f6" stroke="#9ca3af"/>
+<rect x="61.75" y="91.75" width="96.5" height="96.5" fill="#f3f4f6" stroke="#9ca3af"/>
+<circle cx="110" cy="140" r="41.3" fill="#e5e7eb" stroke="#9ca3af"/>
+<circle cx="110" cy="140" r="34.5" fill="#ef4444"/>
+<line x1="50" y1="222" x2="170" y2="222" stroke="#16a34a"/><line x1="50" y1="216" x2="50" y2="228" stroke="#16a34a"/><line x1="170" y1="216" x2="170" y2="228" stroke="#16a34a"/>
+<text x="110" y="240" text-anchor="middle" fill="#16a34a" font-weight="600">L1 12,0</text>
+<line x1="22" y1="80" x2="22" y2="200" stroke="#16a34a"/><line x1="16" y1="80" x2="28" y2="80" stroke="#16a34a"/><line x1="16" y1="200" x2="28" y2="200" stroke="#16a34a"/>
+<text x="14" y="145" text-anchor="middle" fill="#16a34a" font-weight="600" transform="rotate(-90 14 145)">L2 12,0</text>
+<text x="110" y="74" text-anchor="middle" fill="#2563eb" font-weight="600">L4 9,65 × 9,65</text>
+<text x="196" y="128" fill="#dc2626" font-weight="600">L6 1,5 ut</text>
+<text x="196" y="160" fill="#dc2626" font-weight="600">L7 1,5 bred</text>
+<text x="110" y="144" text-anchor="middle" fill="#fff" font-weight="600">L8 Ø6,9</text>
+<text x="110" y="262" text-anchor="middle" fill="#6b7280" font-size="11">grå ring = hvit krage, L11 Ø8,26</text>
+
+<!-- side view -->
+<text x="470" y="56" text-anchor="middle" font-weight="600" fill="#111">Fra siden</text>
+<line x1="360" y1="250" x2="600" y2="250" stroke="#d1d5db"/>
+<rect x="410" y="219" width="120" height="31" fill="#374151"/>
+<rect x="395" y="212" width="15" height="20" fill="#f3f4f6" stroke="#9ca3af"/>
+<rect x="530" y="212" width="15" height="20" fill="#f3f4f6" stroke="#9ca3af"/>
+<rect x="410" y="212" width="120" height="7" fill="#f3f4f6" stroke="#9ca3af"/>
+<rect x="428.7" y="190.5" width="82.6" height="21.5" fill="#f3f4f6" stroke="#9ca3af"/>
+<rect x="435.5" y="179" width="69" height="11.5" rx="2" fill="#ef4444"/>
+<!-- switch legs -->
+<g stroke="#9ca3af" stroke-width="3"><line x1="425" y1="250" x2="425" y2="286"/><line x1="515" y1="250" x2="515" y2="286"/></g>
+<!-- LED legs at tab ends -->
+<g stroke="#9ca3af" stroke-width="1.5"><line x1="400" y1="232" x2="400" y2="286"/><line x1="540" y1="232" x2="540" y2="286"/></g>
+<text x="470" y="302" text-anchor="middle" fill="#6b7280" font-size="11">tykke bein = bryter, L13 3,6 · tynne bein ytterst = LED, ut fra utstikkene</text>
+<!-- L3 -->
+<line x1="545" y1="250" x2="575" y2="250" stroke="#d1d5db"/>
+<line x1="568" y1="219" x2="568" y2="250" stroke="#16a34a"/>
+<line x1="590" y1="212" x2="590" y2="219" stroke="#7c3aed" stroke-width="2"/>
+<text x="596" y="220" fill="#7c3aed" font-weight="600">L14 0,7</text>
+<text x="576" y="239" fill="#16a34a" font-weight="600">L3 3,1</text>
+<!-- L5 -->
+<line x1="512" y1="190.5" x2="575" y2="190.5" stroke="#d1d5db"/>
+<line x1="545" y1="212" x2="575" y2="212" stroke="#d1d5db"/>
+<line x1="568" y1="190.5" x2="568" y2="212" stroke="#2563eb"/>
+<text x="576" y="205" fill="#2563eb" font-weight="600">L5 2,15</text>
+<!-- L9 -->
+<line x1="505" y1="179" x2="575" y2="179" stroke="#d1d5db"/>
+<line x1="568" y1="179" x2="568" y2="190.5" stroke="#dc2626"/>
+<text x="576" y="188" fill="#dc2626" font-weight="600">L9 1,15</text>
+<!-- L12 tabs -->
+<text x="392" y="220" text-anchor="end" fill="#dc2626" font-weight="600">L12 2,0</text>
+<!-- total -->
+<line x1="352" y1="179" x2="352" y2="250" stroke="#7c3aed"/><line x1="346" y1="179" x2="358" y2="179" stroke="#7c3aed"/><line x1="346" y1="250" x2="358" y2="250" stroke="#7c3aed"/>
+<line x1="358" y1="179" x2="470" y2="179" stroke="#d1d5db" stroke-dasharray="3 2"/>
+<text x="344" y="216" text-anchor="middle" fill="#7c3aed" font-weight="600" transform="rotate(-90 344 216)">L10 7,1</text>
+<text x="340" y="330" text-anchor="middle" fill="#6b7280" font-size="11">Hvit del (firkant og utstikk) står 0,7 mm over sort kropp (L14, regnet ut).</text>
+<text x="340" y="348" text-anchor="middle" fill="#6b7280" font-size="11">Alle mål i mm. L = målt av deg, S = spørsmål.</text>
+</svg>
