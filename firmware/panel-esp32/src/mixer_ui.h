@@ -1,8 +1,9 @@
-// The 800x480 mixer screen, design A2 (edge-lit glass, docs/design/).
+// The 800x480 mixer screen: solid dark cards on black.
 // Pure LVGL: the same code runs on the CrowPanel and in the desktop simulator.
 //
-// Two pages, switched with tabs at the top: the mixer (rings, volume, mute)
-// and the apps (drag apps between channels, pick output devices).
+// Two pages, switched with tabs at the top: the mixer (rings, volume, mute,
+// each channel's device and apps) and the apps (move apps between channels,
+// pick output devices).
 
 #pragma once
 

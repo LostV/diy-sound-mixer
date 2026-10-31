@@ -1,6 +1,6 @@
 # Panel firmware (CrowPanel 5" ESP32-S3)
 
-The mixer screen, 800×480, in design A2 (edge-lit glass, see [docs/design](../../docs/design/)). It is written with LVGL 9 and speaks [protocol v1](../../protocol/README.md).
+The mixer screen, 800×480: solid dark cards on a pure black background. It is written with LVGL 9 and speaks [protocol v1](../../protocol/README.md).
 
 | Folder | Contents |
 |---|---|
@@ -23,8 +23,8 @@ Start the PC app first (or afterwards: the simulator reconnects every second). T
 
 ### The two pages
 
-- **Mixer:** rings, volume and mute per channel. The mic card has a picker for the microphone.
-- **Apps:** one column per playback channel, plus "Not controlled". **Hold** an app (long press), **drag** it to another column and **let go**. The target column lights up in its colour. A **short tap** opens a menu with the same choices, plus "Automatic (rules)". Each column has a picker for its output device. Names are shortened to the part in parentheses ("A50 Voice"), and an unplugged device is shown in yellow.
+- **Mixer:** a ring and the volume per channel. Tap a card (or push its knob) to mute: the ring turns dim red, the number becomes a red MUTED and the card gets a red rim. Under the ring the card lists its output device and up to three apps ("+N more" beyond that). The mic card has a picker for the microphone.
+- **Apps:** one column per playback channel, plus "Not controlled" with a count of its apps. **Tap** an app, then **tap "Move here"** in the column it should go to. In its own column the button offers "Automatic (rules)" instead; tap the app again to cancel. **Hold and drag** still works as well. Each column has a picker for its output device. Names are shortened to the part in parentheses ("A50 Voice"), and an unplugged device is shown in yellow.
 
 In the simulator the mouse works as a finger: hold the button for about half a second to pick up an app.
 
@@ -34,6 +34,6 @@ When `PANEL_SIM_INPUT` points at a file, lines appended to it drive a virtual fi
 
 ## Notes for the hardware build (phase 4)
 
-- **Background:** it is computed once at startup into an RGB565 image with ordered dithering. LVGL shadows and gradients band visibly in 16-bit colour, and redrawing them every frame is slow on the ESP32. Allocation uses `malloc` (`LV_STDLIB_CLIB`), so the 768 KB buffer lands in PSRAM.
-- **Cards** use flat translucency for the same reason. The edge light is a brighter top-left border.
+- **Colours:** everything is flat, solid fills on black. Gradients and large shadows band visibly in 16-bit colour and are slow to redraw on the ESP32.
+- **Highlights** (muted cards, drop targets, the picked app) add a 1 px outline to the 1 px border instead of widening the border, so the contents don't shift.
 - **Transport:** USB serial replaces TCP. `panel_protocol` does not change.
