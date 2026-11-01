@@ -33,6 +33,17 @@ Fra sidebildet: de to tynne beina ytterst er LED-beina. De kommer ned fra tuppen
 
 Alle besvart: S1 → L10, S2 → L11, S3 → L12, S4 → L13, S5 → L14.
 
+## Gjengeinnsatser (M3)
+
+| ID | Type | Høyde | Største diameter |
+|----|------|-------|------------------|
+| G1 | Lang | ca. 6 | 5,0 |
+| G2 | Kort | ca. 4 | 5,0 |
+
+**Testet: 4,9 mm hull er best** (testplaten, kort innsats G2, ca. 220 °C). Den gikk lettest inn, sitter godt og var den eneste som ikke presset smeltet plast opp av toppen. De mindre hullene (4,0 / 4,3 / 4,6) fikk plast ut over kanten.
+
+Hullet må være ca. 1 mm dypere enn innsatsen, og stolpen bør ha minst 2 mm vegg rundt hullet.
+
 ## Encoder (knott)
 
 ![Mål på encoderen](maal-encoder.svg)
@@ -59,3 +70,17 @@ Hva det betyr for skallet: platen encoderen sitter i klemmes mellom kroppen og m
 | S8 | Besvart: 12,7 langs siden med de 3 beina, se E3. | |
 
 Alle mål på encoderen er klare.
+
+### Fra databladet
+
+Encoderen er en Bourns PEC11R-4215F-S0024 ([datablad](https://www.bourns.com/docs/Product-Datasheets/PEC11R.pdf), tegningen «PEC11R-4xxxF-Sxxxx»). Det stemmer med målene over:
+
+| Hva | Datablad | Målt |
+|-----|----------|------|
+| Aksel, diameter | 6,0 ± 0,1 | |
+| Aksel, over den flate siden | 4,5 (+0 / −0,05) | |
+| Aksel, fra kroppen til tuppen (L) | 15 | 15,0 (E8) |
+| Gjenge | M7 × 0,75 | Ø6,84 (E1) |
+| Kropp | 12,5 × 13,4, høyde 6,5 | 12,7 × 13,5 × 6,5 (E3) |
+| Trykknapp, vandring | 0,5 | |
+| Bein, avstand | 5,0 | |

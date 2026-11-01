@@ -23,7 +23,7 @@ I mappen `enclosure/testplate/`:
 
 - **PLA**, lagtykkelse 0,2 mm
 - **Platen med den flate forsiden ned** mot printeplaten (slik den åpnes, med stolpene opp)
-- **Bøylen med den flate siden ned** (den lille klossen peker opp)
+- **Bøylen med den flate siden ned** (klossen og de to rørene peker opp)
 - **Ingen support**
 - **4 vegger** (Wall loops: 4), så stolpene til gjengeinnsatsene blir sterke
 - 15–20 % infill
@@ -42,7 +42,7 @@ Sett bakfra, med encoderne til venstre:
 
 ### 1. Gjengeinnsatsene (gjør dette først)
 
-1. Velg en **M3**-innsats fra settet.
+1. Bruk de **korte M3-innsatsene (ca. 4 mm høye, 5 mm i diameter)**. Hullene i stolpene er 6 mm dype, så de lange på 6 mm har ikke plass til plasten de skyver foran seg.
 2. Sett loddebolten med innsats-spissen på ca. **220 °C**.
 3. Smelt én innsats ned i hver av de fire teststolpene. Hold den rett, og trykk rolig til den er i flukt med toppen.
 4. La dem kjøle seg et minutt. Skru så inn en M3-skrue i hver og kjenn etter:
@@ -64,8 +64,8 @@ Stolpene til mic-knappen har 4,2 mm hull. Hvis 4,0 eller 4,3 var best, passer de
 ### 3. Mic-knappen
 
 1. Trykk knappen inn i lommen **bakfra**, med den røde hetta gjennom hullet. De hvite utstikkene går i sporene på sidene.
-2. Legg bøylen over med den lille klossen ned mot baksiden av knappen.
-3. Skru den fast med to **M3×6**-skruer (M3×8 går også) i innsatsene.
+2. Sett dupont-pluggene på beina først. Legg så bøylen over med klossen og rørene ned. Rørene står på de to stolpene, og klossen trykker midt på baksiden av knappen, mellom pluggene. Bøylen går over toppen av pluggene, og den er smal på midten, så ledningene fra bryterbeina kan gå opp på hver side av den.
+3. Skru den fast med to **M3×20**-skruer gjennom rørene og ned i innsatsene. Skruehodene synker ned i bøylen.
 4. Snu platen og sjekk:
    - Stikker den røde hetta opp så langt at den er grei å trykke på? Den skal stå ca. 2,3 mm over platen.
    - Klikker knappen når du trykker, uten at den vipper eller henger?

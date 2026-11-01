@@ -39,12 +39,23 @@ BTN_BODY = 12.0 + 0.3  # L1/L2 + fit
 BTN_HEIGHT = 3.1 + 0.7  # L3 + L14: back of the body to the top of the white part
 BTN_TAB_SLOT = 3.0  # gap in the pocket walls for the tabs and LED legs (L6, L7)
 
-# Retaining bar behind the button, held by two M3 screws in heat-set inserts
+# Retaining bar behind the button, held by two M3 screws in heat-set inserts.
+# The legs leave the body at its edges (switch legs 12.5 x 5 mm apart, LED legs
+# at the tab tips), so the bar bridges over them and a pillar in the middle of
+# the body holds the button. For testing the legs carry female dupont plugs,
+# so the bar clears their tops and is narrow where their wires pass beside it.
+# Spacer tubes on the bar stand on the posts, so the first plate still fits.
+BTN_BACK = BTN_FACE_T + BTN_HEIGHT  # back of the button body above the front face
+DUPONT_H, DUPONT_ROOM = 14.5, 1.5  # plug housing length, and margin above it
 POST_DY = 12.0  # posts at BTN_X, ROW_Y +- POST_DY
 POST_D, POST_TOP = 8.0, 7.0  # post top height above the front face
-INSERT_HOLE = 4.2  # for the posts; check against the ladder below
-BAR_W, BAR_L, BAR_T = 5.0, 32.0, 2.5
+BRIDGE_Z = BTN_BACK + DUPONT_H + DUPONT_ROOM  # underside of the bar
+INSERT_HOLE = 4.9  # best of the ladder for the 5 mm inserts (G1, G2)
+BAR_W, BAR_L, BAR_T = 8.0, 32.0, 4.0
+BAR_NARROW = 2.4  # middle part, between the switch legs 5 mm apart
+PILLAR = 6.0  # square, inside the body outline, clear of all legs
 SCREW_HOLE = 3.4
+SCREW_HEAD_D, SCREW_HEAD_SINK = 6.2, 3.0  # counterbore so an M3x20 reaches the insert
 
 # Insert ladder: same post, four hole sizes, smallest at the front edge
 LADDER_X = 113.0
@@ -90,7 +101,7 @@ def build_plate():
         cuts.append(cylinder(x, ROW_Y, 0, ENC_HOLE, PLATE_T))
 
     # Button: walls around the body, open on both tab sides.
-    walls = ring_pocket(BTN_X, ROW_Y, BTN_BODY, BTN_BODY, PLATE_T, BTN_FACE_T + BTN_HEIGHT - PLATE_T)
+    walls = ring_pocket(BTN_X, ROW_Y, BTN_BODY, BTN_BODY, PLATE_T, BTN_BACK - PLATE_T)
     walls = walls.cut(centered_box(BTN_X, ROW_Y, 0, BTN_BODY + 4 * POCKET_WALL, BTN_TAB_SLOT, 20))
     adds.append(walls)
     tabs_w = 12.0 + 2 * 1.5 + 0.6
@@ -116,13 +127,20 @@ def build_plate():
 
 
 def build_bar():
-    """Bar that holds the button from behind. Printed flat, nub up; in use the
-    nub points down onto the back of the button."""
-    nub_h = POST_TOP - (BTN_FACE_T + BTN_HEIGHT)
-    bar = centered_box(0, 0, 0, BAR_W, BAR_L, BAR_T)
-    bar = bar.fuse(centered_box(0, 0, BAR_T, BAR_W, 6.0, nub_h))
+    """Bar that holds the button from behind. Printed flat, pillar and spacers
+    up; in use they point down, the spacers onto the posts and the pillar onto
+    the back of the button."""
+    spacer_h = BRIDGE_Z - POST_TOP
+    # Wide only over the spacer tubes, from the inner edge of a tube to the end.
+    end_from, end_to = POST_DY - POST_D / 2, BAR_L / 2
+    bar = centered_box(0, 0, 0, BAR_NARROW, BAR_L, BAR_T)
+    for sign in (-1, 1):
+        bar = bar.fuse(centered_box(0, sign * (end_from + end_to) / 2, 0, BAR_W, end_to - end_from, BAR_T))
+    bar = bar.fuse(centered_box(0, 0, BAR_T, PILLAR, PILLAR, BRIDGE_Z - BTN_BACK))
     for dy in (-POST_DY, POST_DY):
-        bar = bar.cut(cylinder(0, dy, 0, SCREW_HOLE, BAR_T))
+        bar = bar.fuse(cylinder(0, dy, BAR_T, POST_D, spacer_h))
+        bar = bar.cut(cylinder(0, dy, 0, SCREW_HOLE, BAR_T + spacer_h))
+        bar = bar.cut(cylinder(0, dy, 0, SCREW_HEAD_D, SCREW_HEAD_SINK))
     return bar.removeSplitter()
 
 

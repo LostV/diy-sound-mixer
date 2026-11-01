@@ -18,3 +18,7 @@ firmware/knobs-pico/build/
 *.log
 Thumbs.db
 .DS_Store
+
+# Blender concept renders (frames and videos, several GB)
+enclosure/concept/renders/
+.claude/
