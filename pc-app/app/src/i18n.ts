@@ -50,7 +50,7 @@ const en = {
   showMeter: "Show meter",
   clear: "Clear",
   simHint:
-    "Turn: mouse wheel or drag up/down. Click the knob or the screen to mute. Arrow keys work when a knob has focus. " +
+    "Turn: mouse wheel or drag up/down. Click a knob or a card on the screen to mute that channel; the red button mutes the mic. Arrow keys work when a knob has focus. " +
     "Everything goes through the same protocol as the real hardware.",
   logIn: "PC → device",
   logOut: "device → PC",
@@ -58,8 +58,10 @@ const en = {
   columnAria: (channel: string, volume: number, muted: boolean) =>
     `${channel} ${volume} percent${muted ? ", muted" : ""}. Press to mute.`,
   noDevice: "No device",
+  mutedLabel: "MUTED",
+  moreApps: (n: number) => `+${n} more`,
   knob: (n: number) => `Knob ${n}`,
-  muteKey: (n: number) => `Mute button ${n}`,
+  micKey: "Mic mute button",
 };
 
 export type Strings = typeof en;
@@ -108,15 +110,17 @@ const no: Strings = {
   showMeter: "Vis meter",
   clear: "Tøm",
   simHint:
-    "Vri: musehjul eller dra opp/ned. Trykk på knotten eller skjermen = mute. Piltaster virker når knotten har fokus. " +
+    "Vri: musehjul eller dra opp/ned. Trykk på en knott eller et kort på skjermen for å mute kanalen; den røde knappen muter micen. Piltaster virker når knotten har fokus. " +
     "Alt går gjennom den samme protokollen som den ekte hardwaren.",
   logIn: "PC → enhet",
   logOut: "enhet → PC",
   invalid: "ugyldig",
   columnAria: (channel, volume, muted) => `${channel} ${volume} prosent${muted ? ", mutet" : ""}. Trykk for mute.`,
   noDevice: "Ingen enhet",
+  mutedLabel: "MUTET",
+  moreApps: (n) => `+${n} til`,
   knob: (n) => `Knott ${n}`,
-  muteKey: (n) => `Mute-knapp ${n}`,
+  micKey: "Mic-mute-knapp",
 };
 
 const tables: Record<Language, Strings> = { en, no };

@@ -1,13 +1,14 @@
-// Simulated hardware: the 5" screen plus four knobs with mute buttons.
+// Simulated hardware: the 5" screen, four push knobs and the mic mute button.
 // Speaks the device protocol (protocol/README.md) exactly like the Pico and
-// the CrowPanel will, so the PC side cannot tell the difference.
+// the CrowPanel do, so the PC side cannot tell the difference.
 
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { type Language, language, setLanguage, tr } from "./i18n";
 
 const SLOTS = 4;
-const FIRMWARE = "sim-0.1.0";
+const MIC_SLOT = 3; // the mic mute button is wired as mute3 with LED 3
+const FIRMWARE = "sim-0.2.0";
 const DRAG_PX_PER_DETENT = 10;
 const WHEEL_PX_PER_DETENT = 100;
 const DEGREES_PER_DETENT = 15; // 24 detents per turn, like the PEC11R
@@ -20,6 +21,7 @@ interface Channel {
   color: string;
   sub: string;
   avail: boolean;
+  cap?: boolean;
 }
 
 type HostMessage =
@@ -68,7 +70,7 @@ function receive(line: string) {
     case "ch": {
       const { i, ...channel } = message;
       if (i < SLOTS) channels[i] = channel;
-      renderColumn(i);
+      renderCard(i);
       break;
     }
     case "meter":
@@ -77,13 +79,13 @@ function receive(line: string) {
       break;
     case "led":
       if (message.id < SLOTS) leds[message.id] = message.on;
-      renderLeds();
+      renderLed();
       break;
     case "lang":
       // Like the panel: only the device's own texts change; names come in `ch`.
       setLanguage(message.v);
       translateControls();
-      for (let i = 0; i < SLOTS; i++) renderColumn(i);
+      for (let i = 0; i < SLOTS; i++) renderCard(i);
       break;
   }
 }
@@ -96,16 +98,24 @@ function log(direction: "in" | "out", text: string) {
   while (logEl.childElementCount > LOG_LIMIT) logEl.lastElementChild!.remove();
 }
 
-// ---- screen ----
+// ---- screen: the panel firmware's mixer page (firmware/panel-esp32) ----
 
-const RING_RADIUS = 42;
-const METER_RADIUS = 34;
+const GAUGE = 176; // px on the 800×480 panel
+const RING_RADIUS = 82;
+const METER_RADIUS = 66;
 const SWEEP = 0.75; // 270° gauge
+
+function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, parent?: HTMLElement) {
+  const node = document.createElement(tag);
+  node.className = className;
+  parent?.append(node);
+  return node;
+}
 
 function arc(radius: number, className: string) {
   const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-  circle.setAttribute("cx", "50");
-  circle.setAttribute("cy", "50");
+  circle.setAttribute("cx", String(GAUGE / 2));
+  circle.setAttribute("cy", String(GAUGE / 2));
   circle.setAttribute("r", String(radius));
   circle.setAttribute("class", className);
   const length = 2 * Math.PI * radius;
@@ -118,50 +128,63 @@ function setArc(circle: SVGCircleElement, radius: number, fraction: number) {
   circle.style.strokeDasharray = `${length * SWEEP * Math.max(0, Math.min(1, fraction))} ${length}`;
 }
 
-interface ColumnView {
+interface CardView {
   root: HTMLButtonElement;
   ring: SVGCircleElement;
   meter: SVGCircleElement;
   value: HTMLElement;
   name: HTMLElement;
-  sub: HTMLElement;
+  info: HTMLElement;
 }
 
-const columns: ColumnView[] = [];
+const title = el("div", "screen-title", screenEl);
+title.textContent = "DIY Sound Mixer";
+const cardsEl = el("div", "cards", screenEl);
+const cards: CardView[] = [];
 
 for (let i = 0; i < SLOTS; i++) {
-  const root = document.createElement("button");
+  const root = el("button", "card empty", cardsEl);
   root.type = "button";
-  root.className = "column empty";
   root.addEventListener("click", () => send({ t: "touch", action: "mute", ch: i }));
 
+  el("span", "dot", root);
+  const name = el("span", "name", root);
+
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", "0 0 100 100");
+  svg.setAttribute("viewBox", `0 0 ${GAUGE} ${GAUGE}`);
   svg.setAttribute("class", "gauge");
-  const track = arc(RING_RADIUS, "track");
+  svg.setAttribute("aria-hidden", "true");
   const ring = arc(RING_RADIUS, "ring");
-  const meterTrack = arc(METER_RADIUS, "meter-track");
   const meter = arc(METER_RADIUS, "meter");
-  svg.append(track, ring, meterTrack, meter);
+  svg.append(arc(RING_RADIUS, "track"), ring, arc(METER_RADIUS, "meter-track"), meter);
+  root.append(svg);
 
-  const value = document.createElement("div");
-  value.className = "gauge-value";
-  const gaugeWrap = document.createElement("div");
-  gaugeWrap.className = "gauge-wrap";
-  gaugeWrap.append(svg, value);
-
-  const name = document.createElement("div");
-  name.className = "name";
-  const sub = document.createElement("div");
-  sub.className = "sub";
-
-  root.append(gaugeWrap, name, sub);
-  screenEl.append(root);
-  columns.push({ root, ring, meter, value, name, sub });
+  const value = el("span", "gauge-value", root);
+  const info = el("span", "info", root);
+  cards.push({ root, ring, meter, value, name, info });
 }
 
-function renderColumn(i: number) {
-  const view = columns[i];
+/// The screen lists the channel's apps under the dial. The simulator only
+/// gets the short subtitle ("Spotify, Chrome +2"), so it unpacks that.
+function renderInfo(view: CardView, ch: Channel) {
+  view.info.replaceChildren();
+  if (ch.cap) {
+    const device = el("span", "mic-name", view.info);
+    device.textContent = ch.avail ? ch.sub : tr().noDevice;
+    return;
+  }
+  const match = /^(.*?)(?: \+(\d+))?$/.exec(ch.sub)!;
+  const names = match[1] ? match[1].split(", ") : [];
+  for (const appName of names) {
+    const row = el("span", "app", view.info);
+    el("span", "avatar", row).textContent = appName.charAt(0);
+    el("span", "app-name", row).textContent = appName;
+  }
+  if (match[2]) el("span", "more", view.info).textContent = tr().moreApps(Number(match[2]));
+}
+
+function renderCard(i: number) {
+  const view = cards[i];
   const ch = channels[i];
   if (!view) return;
   view.root.classList.toggle("empty", !ch);
@@ -170,22 +193,20 @@ function renderColumn(i: number) {
   view.root.classList.toggle("muted", ch.mute);
   view.root.classList.toggle("unavailable", !ch.avail);
   view.root.setAttribute("aria-label", tr().columnAria(ch.name, ch.vol, ch.mute));
-  setArc(view.ring, RING_RADIUS, ch.vol / 100);
-  view.value.textContent = ch.avail ? (ch.mute ? "MUTE" : String(ch.vol)) : "–";
+  setArc(view.ring, RING_RADIUS, ch.avail ? ch.vol / 100 : 0);
+  view.value.textContent = ch.mute ? tr().mutedLabel : ch.avail ? String(ch.vol) : "–";
   view.name.textContent = ch.name;
-  view.sub.textContent = ch.avail ? ch.sub : tr().noDevice;
+  renderInfo(view, ch);
 }
 
 function renderMeters() {
-  columns.forEach((view, i) => setArc(view.meter, METER_RADIUS, meters[i] / 100));
+  cards.forEach((view, i) => setArc(view.meter, METER_RADIUS, meters[i] / 100));
 }
 
-// ---- knobs and buttons ----
+// ---- knobs and the mic button ----
 
 interface KnobView {
   knob: HTMLElement;
-  button: HTMLElement;
-  led: HTMLElement;
   angle: number;
 }
 
@@ -208,16 +229,11 @@ function release(id: string) {
 }
 
 for (let i = 0; i < SLOTS; i++) {
-  const slot = document.createElement("div");
-  slot.className = "slot";
-
-  const knob = document.createElement("div");
-  knob.className = "knob";
+  const slot = el("div", "slot", controlsEl);
+  const knob = el("div", "knob", slot);
   knob.tabIndex = 0;
   knob.setAttribute("role", "slider");
-  const cap = document.createElement("div");
-  cap.className = "knob-cap";
-  knob.append(cap);
+  el("div", "knob-cap", knob);
 
   // Wheel: one notch (~100 px) = one detent; scrolling up turns clockwise.
   // Accumulated so fast spins and touchpads give the right number of detents.
@@ -235,7 +251,7 @@ for (let i = 0; i < SLOTS; i++) {
     { passive: false },
   );
 
-  // Drag up/down to turn; a click without movement is a push.
+  // Drag up/down to turn; a click without movement is a push (= mute).
   let startY = 0;
   let sentDetents = 0;
   let moved = false;
@@ -272,38 +288,34 @@ for (let i = 0; i < SLOTS; i++) {
     if (e.key === "Enter" || e.key === " ") release(`enc${i}`);
   });
 
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "mute-key";
-  const led = document.createElement("span");
-  led.className = "led";
-  button.append(led);
-  button.addEventListener("pointerdown", () => press(`mute${i}`));
-  button.addEventListener("pointerup", () => release(`mute${i}`));
-  button.addEventListener("keydown", (e) => {
-    if ((e.key === "Enter" || e.key === " ") && !e.repeat) {
-      e.preventDefault();
-      press(`mute${i}`);
-    }
-  });
-  button.addEventListener("keyup", (e) => {
-    if (e.key === "Enter" || e.key === " ") release(`mute${i}`);
-  });
-
-  slot.append(knob, button);
-  controlsEl.append(slot);
-  knobs.push({ knob, button, led, angle: 0 });
+  knobs.push({ knob, angle: 0 });
 }
+
+// The one dedicated button: mic mute, with its red LED.
+const micButton = el("button", "mic-key", controlsEl);
+micButton.type = "button";
+const micLed = el("span", "led", micButton);
+const micId = `mute${MIC_SLOT}`;
+micButton.addEventListener("pointerdown", () => press(micId));
+micButton.addEventListener("pointerup", () => release(micId));
+micButton.addEventListener("keydown", (e) => {
+  if ((e.key === "Enter" || e.key === " ") && !e.repeat) {
+    e.preventDefault();
+    press(micId);
+  }
+});
+micButton.addEventListener("keyup", (e) => {
+  if (e.key === "Enter" || e.key === " ") release(micId);
+});
 
 function translateControls() {
-  knobs.forEach((view, i) => {
-    view.knob.setAttribute("aria-label", tr().knob(i + 1));
-    view.button.setAttribute("aria-label", tr().muteKey(i + 1));
-  });
+  knobs.forEach((view, i) => view.knob.setAttribute("aria-label", tr().knob(i + 1)));
+  micButton.setAttribute("aria-label", tr().micKey);
 }
 
-function renderLeds() {
-  knobs.forEach((view, i) => view.led.classList.toggle("on", leds[i]));
+function renderLed() {
+  micLed.classList.toggle("on", leds[MIC_SLOT]);
+  micButton.setAttribute("aria-pressed", String(leds[MIC_SLOT]));
 }
 
 // ---- start ----

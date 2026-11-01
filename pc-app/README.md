@@ -18,7 +18,7 @@ Rust + Tauri 2. See [docs/software-plan.md](../docs/software-plan.md) for the ar
 - **Tray:** the icon has a menu with Open mixer, Simulator, Start with Windows and Quit. A left click opens the mixer.
 - **Closing the window** only hides it; the app keeps running in the tray. Quit from the tray menu.
 - **Start with Windows** launches the app hidden in the tray (`--minimized`). Note: in `tauri dev`, the debug build's path is registered, so turn it off again after testing. Turn it on for real in the installed version.
-- **Simulator** (button in the window, or the tray menu): a virtual device with the screen, 4 knobs and mute buttons. It speaks the same protocol as the hardware, and the log at the bottom shows every message. Turn a knob with the mouse wheel or by dragging up/down; click a knob or the screen to mute.
+- **Simulator** (button in the window, or the tray menu): a virtual device with the screen's mixer page, 4 push knobs and the mic mute button with its LED. It speaks the same protocol as the hardware, and the log at the bottom shows every message. Turn a knob with the mouse wheel or by dragging up/down; click a knob or a card on the screen to mute that channel. The app page lives only on the real screen and its desktop simulator (firmware/panel-esp32).
 
 ## Requirements
 

@@ -23,51 +23,84 @@ body.sim {
   border-radius: 14px;
 }
 
-/* 800×480 panel; everything inside scales with its width (cqw). */
+/* 800×480 panel. --px is one panel pixel, so the sizes below match the
+   firmware (firmware/panel-esp32/src/mixer_ui.cpp) and scale with the width. */
 .screen {
   container-type: inline-size;
+  --px: 0.125cqw;
+  position: relative;
   aspect-ratio: 800 / 480;
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5cqw;
-  padding: 3cqw 2.5cqw;
-  background: radial-gradient(circle at 50% 0%, #1d2026, #0f1013 70%);
+  overflow: hidden;
+  background: #000;
   border-radius: 4px;
+  color: #f4f5f8;
 }
 
-.column {
-  all: unset;
+.screen-title {
+  position: absolute;
+  left: calc(22 * var(--px));
+  top: calc(22 * var(--px));
+  font-size: calc(16 * var(--px));
+  color: rgb(244 245 248 / 85%);
+}
+
+.cards {
+  position: absolute;
+  left: calc(18 * var(--px));
+  top: calc(62 * var(--px));
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.2cqw;
-  border-radius: 1.5cqw;
+  gap: calc(12 * var(--px));
+}
+
+.card {
+  all: unset;
+  position: relative;
+  width: calc(182 * var(--px));
+  height: calc(384 * var(--px));
+  box-sizing: border-box;
+  background: #111113;
+  border: calc(1 * var(--px)) solid #232327;
+  border-radius: calc(22 * var(--px));
   cursor: pointer;
-  color: #f1f1f3;
 }
 
-.column:hover {
-  background: rgb(255 255 255 / 4%);
+.card:active {
+  background: #18181b;
 }
 
-.column:focus-visible {
-  outline: 0.3cqw solid var(--accent, #888);
+.card:focus-visible {
+  outline: calc(3 * var(--px)) solid var(--accent, #888);
 }
 
-.column.empty {
+.card.empty {
   visibility: hidden;
 }
 
-.gauge-wrap {
-  position: relative;
-  width: 19cqw;
-  aspect-ratio: 1;
+.card .dot {
+  position: absolute;
+  left: calc(17 * var(--px));
+  top: calc(23 * var(--px));
+  width: calc(10 * var(--px));
+  height: calc(10 * var(--px));
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 calc(10 * var(--px)) var(--accent);
+}
+
+.card .name {
+  position: absolute;
+  left: calc(35 * var(--px));
+  top: calc(15 * var(--px));
+  font-size: calc(20 * var(--px));
+  font-weight: 600;
 }
 
 .gauge {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  left: calc(2 * var(--px));
+  top: calc(53 * var(--px));
+  width: calc(176 * var(--px));
+  height: calc(176 * var(--px));
   transform: rotate(135deg);
 }
 
@@ -77,88 +110,138 @@ body.sim {
 }
 
 .gauge .track {
-  stroke: #2a2d33;
-  stroke-width: 7;
+  stroke: rgb(255 255 255 / 12%);
+  stroke-width: 12;
 }
 
 .gauge .ring {
   stroke: var(--accent);
-  stroke-width: 7;
+  stroke-width: 12;
   transition: stroke-dasharray 80ms linear;
 }
 
 .gauge .meter-track {
-  stroke: #1c1e22;
-  stroke-width: 3;
+  stroke: rgb(255 255 255 / 8%);
+  stroke-width: 4;
 }
 
 .gauge .meter {
-  stroke: var(--accent);
-  stroke-width: 3;
-  opacity: 0.55;
+  stroke: color-mix(in srgb, var(--accent) 90%, white);
+  stroke-width: 4;
+  opacity: 0.7;
   transition: stroke-dasharray 50ms linear;
 }
 
 .gauge-value {
   position: absolute;
-  inset: 0;
+  left: 0;
+  top: calc(53 * var(--px));
+  width: calc(180 * var(--px));
+  height: calc(176 * var(--px));
   display: grid;
   place-items: center;
-  font-size: 4.6cqw;
+  font-size: calc(44 * var(--px));
   font-weight: 300;
   font-variant-numeric: tabular-nums;
 }
 
-.name {
-  font-size: 2.4cqw;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding-bottom: 0.6cqw;
-  border-bottom: 0.35cqw solid var(--accent);
-  min-width: 60%;
-  text-align: center;
+/* Under the dial: the channel's apps, or the mic's name */
+.info {
+  position: absolute;
+  left: calc(15 * var(--px));
+  top: calc(245 * var(--px));
+  width: calc(150 * var(--px));
+  display: flex;
+  flex-direction: column;
+  gap: calc(6 * var(--px));
 }
 
-.sub {
-  max-width: 100%;
-  font-size: 1.7cqw;
-  color: #9a9ca3;
-  text-align: center;
+.info .mic-name {
+  padding-bottom: calc(8 * var(--px));
+  border-bottom: calc(1 * var(--px)) solid #232327;
+  font-size: calc(14 * var(--px));
+  color: #8b9099;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.column.muted .ring,
-.column.muted .meter {
-  stroke: #4a4d55;
+.info .app {
+  display: flex;
+  align-items: center;
+  gap: calc(8 * var(--px));
+  height: calc(24 * var(--px));
 }
 
-.column.muted .gauge-value {
-  font-size: 3cqw;
-  font-weight: 700;
-  color: #e5484d;
+.info .avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: calc(24 * var(--px));
+  height: calc(24 * var(--px));
+  border-radius: calc(6 * var(--px));
+  background: var(--accent);
+  color: #fff;
+  font-size: calc(14 * var(--px));
 }
 
-.column.unavailable {
+.info .app-name {
+  min-width: 0;
+  font-size: calc(14 * var(--px));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.info .more {
+  padding-left: calc(32 * var(--px));
+  font-size: calc(14 * var(--px));
+  color: #8b9099;
+}
+
+/* Muted: red MUTED in the dial, dim red ring, red rim, meter off */
+.card.muted {
+  border-color: #f43f5e;
+  outline: calc(1 * var(--px)) solid #f43f5e;
+}
+
+.card.muted .ring {
+  stroke: #f43f5e;
   opacity: 0.45;
 }
 
-/* Knobs and mute keys, lined up under the screen columns */
+.card.muted .meter {
+  opacity: 0;
+}
+
+.card.muted .gauge-value {
+  font-size: calc(20 * var(--px));
+  font-weight: 600;
+  letter-spacing: calc(2 * var(--px));
+  color: #f43f5e;
+}
+
+.card.muted .info {
+  opacity: 0.45;
+}
+
+.card.unavailable {
+  opacity: 0.55;
+}
+
+/* Four push knobs under the cards, the mic mute button to the right */
 
 .controls {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, 1fr) auto;
+  align-items: center;
   margin-top: 26px;
-  padding: 0 2.5%;
+  padding: 0 1% 0 2.5%;
 }
 
 .slot {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
+  justify-content: center;
 }
 
 .knob {
@@ -166,10 +249,11 @@ body.sim {
   width: 96px;
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #fbfbfa, #d2d2cd 70%, #b9b9b3);
+  /* black anodised aluminium */
+  background: radial-gradient(circle at 35% 30%, #4a4b4f, #1f2023 65%, #121214);
   box-shadow:
-    0 8px 14px rgb(0 0 0 / 35%),
-    inset 0 -3px 6px rgb(0 0 0 / 15%);
+    0 8px 14px rgb(0 0 0 / 40%),
+    inset 0 1px 1px rgb(255 255 255 / 18%);
   cursor: ns-resize;
   touch-action: none;
   user-select: none;
@@ -199,29 +283,35 @@ body.sim {
   height: 22%;
   margin-left: -2px;
   border-radius: 2px;
-  background: #6b6b66;
+  background: #c9cacd;
 }
 
-.mute-key {
+.mic-key {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
+  width: 54px;
+  height: 54px;
   padding: 0;
-  background: linear-gradient(#3a3c41, #26282c);
-  border: 1px solid #1b1c1f;
-  border-radius: 9px;
-  box-shadow: 0 3px 0 #141517;
+  background: radial-gradient(circle at 40% 35%, #3a3c41, #1d1e21);
+  border: 1px solid #111214;
+  border-radius: 50%;
+  box-shadow: 0 3px 0 #0e0f10;
+  cursor: pointer;
 }
 
-.mute-key:active {
+.mic-key:active {
   transform: translateY(2px);
-  box-shadow: 0 1px 0 #141517;
+  box-shadow: 0 1px 0 #0e0f10;
+}
+
+.mic-key:focus-visible {
+  outline: 3px solid #5865f2;
+  outline-offset: 4px;
 }
 
 .led {
-  width: 12px;
-  height: 12px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   background: #3b1416;
   box-shadow: inset 0 1px 2px rgb(0 0 0 / 60%);
@@ -229,7 +319,7 @@ body.sim {
 
 .led.on {
   background: #ff4d52;
-  box-shadow: 0 0 10px 2px rgb(255 77 82 / 70%);
+  box-shadow: 0 0 12px 3px rgb(255 77 82 / 70%);
 }
 
 /* Protocol log */
