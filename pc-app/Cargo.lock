@@ -804,7 +804,7 @@ dependencies = [
 
 [[package]]
 name = "diy-sound-mixer"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "base64 0.22.1",
  "log",
@@ -2112,7 +2112,7 @@ dependencies = [
 
 [[package]]
 name = "mixer-core"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "log",
  "serde",
@@ -2121,7 +2121,7 @@ dependencies = [
 
 [[package]]
 name = "mixer-devices"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "base64 0.22.1",
  "log",
@@ -2132,7 +2132,7 @@ dependencies = [
 
 [[package]]
 name = "mixer-wasapi"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "log",
  "mixer-core",
