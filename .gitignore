@@ -12,6 +12,7 @@ pc-app/app/src-tauri/gen/schemas/
 .pio/
 build-sim/
 firmware/knobs-pico/build/
+firmware/panel-esp32/build/
 
 # Editor / OS
 .vs/

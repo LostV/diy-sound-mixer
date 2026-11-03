@@ -1,5 +1,5 @@
-//! Device connections over USB serial: the knob board (Pico) today, the
-//! screen later. Ports come and go as cables are plugged in, so a background
+//! Device connections over USB serial: the knob board (Pico) and the
+//! screen (CrowPanel). Ports come and go as cables are plugged in, so a background
 //! thread looks for them every second and opens each new one as a link.
 //!
 //! Only ports with a known USB vendor id are opened. Opening a serial port
@@ -17,8 +17,14 @@ use tauri::AppHandle;
 
 use crate::links::{self, Links};
 
-/// USB vendor ids of the mixer hardware. 0x2E8A is Raspberry Pi (the Pico).
-const DEVICE_VIDS: &[u16] = &[0x2E8A];
+/// USB vendor ids of the mixer hardware. 0x2E8A is Raspberry Pi (the Pico),
+/// 0x1A86 is WCH, maker of the CH340C USB-serial chip on the CrowPanel.
+const DEVICE_VIDS: &[u16] = &[PICO_VID, CH340_VID];
+const PICO_VID: u16 = 0x2E8A;
+const CH340_VID: u16 = 0x1A86;
+
+/// The Pico's USB CDC ignores the rate; the CrowPanel firmware uses this one.
+const BAUD: u32 = 921_600;
 
 const SCAN_INTERVAL: Duration = Duration::from_secs(1);
 /// Short, so the reader notices an unplugged cable quickly.
@@ -35,12 +41,12 @@ pub fn watch(app: AppHandle, links: Links) {
             let mut refused = HashSet::<String>::new();
             loop {
                 let present = device_ports();
-                refused.retain(|port| present.contains(port));
-                for port in present {
+                refused.retain(|port| present.iter().any(|(p, _)| p == port));
+                for (port, vid) in present {
                     if open.lock().expect("serial lock").contains(&port) {
                         continue;
                     }
-                    match connect(&app, &links, &port, &open) {
+                    match connect(&app, &links, &port, vid, &open) {
                         Ok(()) => {
                             refused.remove(&port);
                         }
@@ -59,16 +65,17 @@ pub fn watch(app: AppHandle, links: Links) {
     }
 }
 
-/// Names of present serial ports that belong to mixer hardware.
-fn device_ports() -> Vec<String> {
+/// Present serial ports that belong to mixer hardware, with their vendor id.
+fn device_ports() -> Vec<(String, u16)> {
     serialport::available_ports()
         .unwrap_or_default()
         .into_iter()
-        .filter(|p| {
-            matches!(&p.port_type, SerialPortType::UsbPort(UsbPortInfo { vid, .. })
-                if DEVICE_VIDS.contains(vid))
+        .filter_map(|p| match p.port_type {
+            SerialPortType::UsbPort(UsbPortInfo { vid, .. }) if DEVICE_VIDS.contains(&vid) => {
+                Some((p.port_name, vid))
+            }
+            _ => None,
         })
-        .map(|p| p.port_name)
         .collect()
 }
 
@@ -77,13 +84,19 @@ fn connect(
     app: &AppHandle,
     links: &Links,
     port: &str,
+    vid: u16,
     open: &Arc<Mutex<HashSet<String>>>,
 ) -> serialport::Result<()> {
-    let mut reader = serialport::new(port, 115_200)
-        .timeout(READ_TIMEOUT)
-        .open()?;
-    // USB CDC devices only send once the host raises DTR.
-    reader.write_data_terminal_ready(true)?;
+    let mut reader = serialport::new(port, BAUD).timeout(READ_TIMEOUT).open()?;
+    if vid == CH340_VID {
+        // DTR and RTS drive the ESP32's reset and boot pins through the
+        // auto-download circuit. With both released it just keeps running.
+        reader.write_data_terminal_ready(false)?;
+        reader.write_request_to_send(false)?;
+    } else {
+        // USB CDC devices only send once the host raises DTR.
+        reader.write_data_terminal_ready(true)?;
+    }
     let writer = reader.try_clone()?;
 
     open.lock().expect("serial lock").insert(port.to_string());

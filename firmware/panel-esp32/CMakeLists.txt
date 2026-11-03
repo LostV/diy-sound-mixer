@@ -4,7 +4,7 @@
 #   cmake --build build-sim --config Release
 #   build-sim/Release/panel_sim.exe
 #
-# The CrowPanel build itself uses PlatformIO with the same src/ and fonts/.
+# The CrowPanel build itself is panel-esp32.ino (arduino-cli), with the same src/.
 
 cmake_minimum_required(VERSION 3.20)
 project(panel_sim C CXX)
@@ -49,7 +49,7 @@ FetchContent_Declare(ArduinoJson
   GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(ArduinoJson)
 
-file(GLOB PANEL_FONTS ${CMAKE_CURRENT_SOURCE_DIR}/fonts/*.c)
+file(GLOB PANEL_FONTS ${CMAKE_CURRENT_SOURCE_DIR}/src/fonts/*.c)
 add_executable(panel_sim
   sim/main.cpp
   src/mixer_ui.cpp
