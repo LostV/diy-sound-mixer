@@ -26,7 +26,13 @@ pub const DEV_PORT: u16 = if cfg!(debug_assertions) { 47801 } else { 47800 };
 
 /// Outgoing line queues per connected link.
 #[derive(Clone, Default)]
-pub struct Links(Arc<Mutex<HashMap<String, Sender<String>>>>);
+pub struct Links(Arc<Mutex<HashMap<String, Sender<Outgoing>>>>);
+
+/// One queued line. Meters are replaced by newer ones, so they may be dropped.
+struct Outgoing {
+    line: String,
+    meter: bool,
+}
 
 impl Links {
     /// Queues messages for `link`; false if it is not one of ours.
@@ -36,10 +42,27 @@ impl Links {
             return false;
         };
         for message in messages {
-            let _ = tx.send(message.to_line());
+            let _ = tx.send(Outgoing {
+                line: message.to_line(),
+                meter: matches!(message, HostMessage::Meter { .. }),
+            });
         }
         true
     }
+}
+
+/// The bytes for a batch of queued lines, keeping only the newest meter.
+fn batch_bytes(batch: Vec<Outgoing>) -> Vec<u8> {
+    let newest_meter = batch.iter().rposition(|out| out.meter);
+    let mut bytes = Vec::new();
+    for (i, out) in batch.into_iter().enumerate() {
+        if out.meter && Some(i) != newest_meter {
+            continue;
+        }
+        bytes.extend_from_slice(out.line.as_bytes());
+        bytes.push(b'\n');
+    }
+    bytes
 }
 
 /// Accepts connections on a background thread for the app's lifetime.
@@ -91,16 +114,20 @@ pub fn run_link(
     log::info!("{link}: connected");
 
     // Writer thread: drains the queue so a slow device never blocks the mixer.
-    let (tx, rx) = mpsc::channel::<String>();
+    // It writes everything queued in one go: a flush takes tens of
+    // milliseconds on the CrowPanel's CH340, so flushing every line let the
+    // queue (30 meters a second) grow without end.
+    let (tx, rx) = mpsc::channel::<Outgoing>();
     links
         .0
         .lock()
         .expect("links lock")
         .insert(link.to_string(), tx);
     thread::spawn(move || {
-        for line in rx {
-            let mut bytes = line.into_bytes();
-            bytes.push(b'\n');
+        while let Ok(first) = rx.recv() {
+            let mut batch = vec![first];
+            batch.extend(rx.try_iter());
+            let bytes = batch_bytes(batch);
             if writer.write_all(&bytes).and_then(|()| writer.flush()).is_err() {
                 break;
             }
@@ -185,6 +212,18 @@ mod tests {
             lines(vec![Ok(b"{\"t\":".to_vec()), Ok(b"1}\r\n{\"t\":2}\n".to_vec())]),
             vec![r#"{"t":1}"#, r#"{"t":2}"#]
         );
+    }
+
+    #[test]
+    fn batch_keeps_every_line_but_only_the_newest_meter() {
+        let out = |line: &str, meter| Outgoing { line: line.into(), meter };
+        let bytes = batch_bytes(vec![
+            out("m1", true),
+            out("ch", false),
+            out("m2", true),
+            out("led", false),
+        ]);
+        assert_eq!(bytes, b"ch\nm2\nled\n");
     }
 
     #[test]
