@@ -1,4 +1,5 @@
-//! Session volume and mute, applied on a thread of their own.
+//! Session volume and mute, and the microphone's, applied on a thread of
+//! their own.
 //!
 //! On some devices (seen with an Astro A50) Windows takes 70–130 ms per
 //! `SetMasterVolume` call, and an app like Chrome has many sessions. Done on
@@ -9,6 +10,10 @@
 //! Each write can also cost ~60 MB of kernel memory (ETW notification data,
 //! freed over minutes; seen on a Windows 11 machine with an Astro A50), so
 //! values Windows already has are never written again.
+//!
+//! The microphone (an endpoint volume) is slower still: ~0.4 s per write on
+//! the A50 Mic, so turning the mic knob froze the meters and the screen for
+//! seconds.
 
 use std::{
     collections::HashMap,
@@ -17,12 +22,45 @@ use std::{
 };
 
 use windows::Win32::{
-    Media::Audio::ISimpleAudioVolume,
+    Media::Audio::{Endpoints::IAudioEndpointVolume, ISimpleAudioVolume},
     System::Com::{COINIT_MULTITHREADED, CoInitializeEx, CoUninitialize},
 };
 
-/// A session's volume control, sent to the writer thread.
-struct Control(ISimpleAudioVolume);
+/// A session's or the microphone's volume control, sent to the writer thread.
+enum Control {
+    Session(ISimpleAudioVolume),
+    Endpoint(IAudioEndpointVolume),
+}
+
+impl Control {
+    fn volume(&self) -> windows::core::Result<f32> {
+        match self {
+            Self::Session(c) => unsafe { c.GetMasterVolume() },
+            Self::Endpoint(c) => unsafe { c.GetMasterVolumeLevelScalar() },
+        }
+    }
+
+    fn set_volume(&self, volume: f32) -> windows::core::Result<()> {
+        match self {
+            Self::Session(c) => unsafe { c.SetMasterVolume(volume, std::ptr::null()) },
+            Self::Endpoint(c) => unsafe { c.SetMasterVolumeLevelScalar(volume, std::ptr::null()) },
+        }
+    }
+
+    fn muted(&self) -> windows::core::Result<bool> {
+        match self {
+            Self::Session(c) => unsafe { c.GetMute() }.map(|m| m.as_bool()),
+            Self::Endpoint(c) => unsafe { c.GetMute() }.map(|m| m.as_bool()),
+        }
+    }
+
+    fn set_muted(&self, muted: bool) -> windows::core::Result<()> {
+        match self {
+            Self::Session(c) => unsafe { c.SetMute(muted, std::ptr::null()) },
+            Self::Endpoint(c) => unsafe { c.SetMute(muted, std::ptr::null()) },
+        }
+    }
+}
 
 // SAFETY: windows-rs doesn't mark audio interfaces Send, but both the mixer
 // thread and the writer thread are in the multithreaded apartment, where COM
@@ -65,25 +103,60 @@ impl SessionWriter {
     }
 
     pub(crate) fn set_volume(&self, session_id: &str, control: &ISimpleAudioVolume, volume: f32) {
-        self.queue(session_id, control, |p| p.volume = Some(volume));
+        self.queue(
+            session_id,
+            || Control::Session(control.clone()),
+            |p| p.volume = Some(volume),
+        );
     }
 
     pub(crate) fn set_mute(&self, session_id: &str, control: &ISimpleAudioVolume, muted: bool) {
-        self.queue(session_id, control, |p| p.muted = Some(muted));
+        self.queue(
+            session_id,
+            || Control::Session(control.clone()),
+            |p| p.muted = Some(muted),
+        );
+    }
+
+    /// The microphone; `device_id` keeps it apart from the sessions.
+    pub(crate) fn set_endpoint_volume(
+        &self,
+        device_id: &str,
+        control: &IAudioEndpointVolume,
+        volume: f32,
+    ) {
+        self.queue(
+            device_id,
+            || Control::Endpoint(control.clone()),
+            |p| p.volume = Some(volume),
+        );
+    }
+
+    pub(crate) fn set_endpoint_mute(
+        &self,
+        device_id: &str,
+        control: &IAudioEndpointVolume,
+        muted: bool,
+    ) {
+        self.queue(
+            device_id,
+            || Control::Endpoint(control.clone()),
+            |p| p.muted = Some(muted),
+        );
     }
 
     fn queue(
         &self,
-        session_id: &str,
-        control: &ISimpleAudioVolume,
+        id: &str,
+        control: impl FnOnce() -> Control,
         update: impl FnOnce(&mut Pending),
     ) {
         let mut state = self.shared.state.lock().expect("writer lock");
         let pending = state
             .pending
-            .entry(session_id.to_owned())
+            .entry(id.to_owned())
             .or_insert_with(|| Pending {
-                control: Control(control.clone()),
+                control: control(),
                 volume: None,
                 muted: None,
             });
@@ -117,22 +190,21 @@ fn run(shared: &Shared) {
             std::mem::take(&mut state.pending)
         };
         for (id, pending) in batch {
-            let control = &pending.control.0;
+            let control = &pending.control;
             // Reading is free; writing is the expensive part, so skip it when
             // Windows already has the value (e.g. after a restart).
             if let Some(volume) = pending.volume
-                && unsafe { control.GetMasterVolume() }
+                && control
+                    .volume()
                     .ok()
                     .is_none_or(|v| (v - volume).abs() > 0.001)
-                && let Err(e) = unsafe { control.SetMasterVolume(volume, std::ptr::null()) }
+                && let Err(e) = control.set_volume(volume)
             {
                 log::debug!("set volume on {id}: {e}");
             }
             if let Some(muted) = pending.muted
-                && unsafe { control.GetMute() }
-                    .ok()
-                    .is_none_or(|m| m.as_bool() != muted)
-                && let Err(e) = unsafe { control.SetMute(muted, std::ptr::null()) }
+                && control.muted().ok().is_none_or(|m| m != muted)
+                && let Err(e) = control.set_muted(muted)
             {
                 log::debug!("set mute on {id}: {e}");
             }

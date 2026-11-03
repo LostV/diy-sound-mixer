@@ -176,6 +176,8 @@ void poll_serial() {
                 if (!connected) {
                     connected = true;
                     ui::set_connected(true);
+                    // After a silence the model was cleared: ask for everything.
+                    send_to_pc(panel::hello_line());
                 }
                 handle(line);
             }

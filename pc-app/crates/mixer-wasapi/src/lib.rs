@@ -9,7 +9,10 @@ mod policy;
 mod process;
 mod writer;
 
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    time::{Duration, Instant},
+};
 
 use mixer_core::{AudioBackend, CaptureInfo, DeviceInfo, SessionInfo};
 use windows::{
@@ -70,6 +73,30 @@ struct Device {
 struct Capture {
     volume: IAudioEndpointVolume,
     meter: IAudioMeterInformation,
+    /// Values handed to the writer that Windows may not have yet. Scans
+    /// report these instead, or the mic channel would jump back while a
+    /// write is on its way.
+    wanted_volume: Option<(f32, Instant)>,
+    wanted_muted: Option<(bool, Instant)>,
+}
+
+/// How long a queued mic write may take before scans trust Windows again
+/// (each write takes ~0.4 s on an A50).
+const WANTED_FOR: Duration = Duration::from_secs(2);
+
+/// What a scan reports: the wanted value until Windows has it or it is old.
+fn reported<T: Copy + PartialEq>(
+    actual: T,
+    wanted: &mut Option<(T, Instant)>,
+    same: impl Fn(T, T) -> bool,
+) -> T {
+    match *wanted {
+        Some((value, since)) if !same(value, actual) && since.elapsed() < WANTED_FOR => value,
+        _ => {
+            *wanted = None;
+            actual
+        }
+    }
 }
 
 /// Must be created and used on one thread (the mixer host thread).
@@ -86,7 +113,7 @@ pub struct WasapiBackend {
     /// `None` when this Windows has no per-app routing we recognise.
     policy: Option<PolicyConfig>,
     processes: ProcessCache,
-    /// Applies session volume and mute off this thread; Windows can be slow.
+    /// Applies session and mic volume and mute off this thread; Windows can be slow.
     writer: SessionWriter,
     com_initialized: bool,
 }
@@ -294,15 +321,21 @@ impl WasapiBackend {
             let capture = Capture {
                 volume: unsafe { device.Activate(CLSCTX_ALL, None)? },
                 meter: unsafe { device.Activate(CLSCTX_ALL, None)? },
+                wanted_volume: None,
+                wanted_muted: None,
             };
             self.capture = Some((id.clone(), capture));
         }
-        let (_, capture) = self.capture.as_ref().expect("set above");
+        let (_, capture) = self.capture.as_mut().expect("set above");
+        let volume = unsafe { capture.volume.GetMasterVolumeLevelScalar()? };
+        let muted = unsafe { capture.volume.GetMute()? }.as_bool();
         Ok(CaptureInfo {
             device_id: id,
             device_name: friendly_name(&device),
-            volume: unsafe { capture.volume.GetMasterVolumeLevelScalar()? },
-            muted: unsafe { capture.volume.GetMute()? }.as_bool(),
+            volume: reported(volume, &mut capture.wanted_volume, |a, b| {
+                (a - b).abs() < 0.001
+            }),
+            muted: reported(muted, &mut capture.wanted_muted, |a, b| a == b),
         })
     }
 }
@@ -422,21 +455,16 @@ impl AudioBackend for WasapiBackend {
     }
 
     fn set_capture_volume(&mut self, volume: f32) {
-        if let Some((_, c)) = &self.capture
-            && let Err(e) = unsafe {
-                c.volume
-                    .SetMasterVolumeLevelScalar(volume, std::ptr::null())
-            }
-        {
-            log::warn!("set mic volume: {e}");
+        if let Some((id, c)) = &mut self.capture {
+            c.wanted_volume = Some((volume, Instant::now()));
+            self.writer.set_endpoint_volume(id, &c.volume, volume);
         }
     }
 
     fn set_capture_mute(&mut self, muted: bool) {
-        if let Some((_, c)) = &self.capture
-            && let Err(e) = unsafe { c.volume.SetMute(muted, std::ptr::null()) }
-        {
-            log::warn!("set mic mute: {e}");
+        if let Some((id, c)) = &mut self.capture {
+            c.wanted_muted = Some((muted, Instant::now()));
+            self.writer.set_endpoint_mute(id, &c.volume, muted);
         }
     }
 }
