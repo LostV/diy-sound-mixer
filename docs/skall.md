@@ -21,6 +21,7 @@ I mappen `enclosure/shell/`:
 | `shell.stl` | Selve skallet, åpent i bunnen | 1 |
 | `bottom.stl` | Bunnplaten, med fire små stolper til Pico-en | 1 |
 | `ring.stl` | Fargering under en knott | 4, én i hver kanalfarge |
+| `screen-frame.stl` | Testramme for skjermen, printes før skallet | 1 |
 | `../testplate/button-bar.stl` | Bøylen til mic-knappen, den samme som på testplaten | 1 (du har den allerede) |
 | `assembly.step` | Alt satt sammen, bare for å se på | |
 
@@ -37,9 +38,9 @@ I mappen `enclosure/shell/`:
 - **To spor i bakveggen** slipper ut kablene: USB-C fra skjermen til venstre, USB fra Pico-en til høyre. Kablene legges i sporene før bunnplaten skrus på.
 - **Bunnplaten** ligger inne mellom veggene, i flukt med underkanten. Den holdes av fire M3-skruer i hjørnene. Den er 4 mm tykk, så boksen blir tung og står stødig når du vrir på knottene.
 
-## Vent med skallet til skjermen kommer
+## Sjekk skjermen før du printer skallet
 
-Skjermmålene kommer fra Elecrows tegning, ikke fra skyvelæret ditt. Når skjermen kommer, måler du dette, så justerer jeg før du printer skallet:
+Skjermmålene kommer fra Elecrows tegning. Disse fem målte du med skyvelæret, og alle stemte innen 1 mm (3. november):
 
 | ID | Hva | Fra tegningen |
 |----|-----|---------------|
@@ -49,7 +50,17 @@ Skjermmålene kommer fra Elecrows tegning, ikke fra skyvelæret ditt. Når skjer
 | K4 | Avstand mellom skruehullene, bredde × høyde (senter til senter) | 130 × 77 |
 | K5 | Hvor USB-C-kontakten sitter | Midt på venstre kortside, sett forfra |
 
-Ringene og bunnplaten kan du printe nå.
+Det er ikke helt nok. Glasset har bare 0,2 mm luft på hver side i hullet, så 0,5 mm for stort glass passer ikke. Et skruehull 1 mm feil gjør at skruen ikke treffer innsatsen. Print derfor **testrammen** `screen-frame.stl` først: den er en flat bit av skjerm-flaten med glasshullet og de fire stolpene. Den veier ca. 10 g og tar en halvtime.
+
+- Print den med forsiden ned (den flate siden mot platen), uten support.
+- Smelt inn fire gjengeinnsatser i stolpene.
+- Legg skjermen inn bakfra. Glasset skal gli inn i hullet uten å presses, og kortet skal ligge flatt på alle fire stolpene.
+- Skru fast med fire M3 × 6. Skruene skal gå rett inn uten at du må bøye kortet.
+- Se fra forsiden: glasset skal ligge litt under kanten, og den svarte kanten rundt bildet skal være like bred på alle sider.
+
+Passer det, printer du skallet. Er glasset for trangt eller hullene skjeve, si fra hvor det tar, så justerer jeg.
+
+Ringene og bunnplaten kan du printe når som helst.
 
 ## Printe
 

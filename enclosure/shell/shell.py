@@ -281,6 +281,20 @@ def build_ring():
     return ring.cut(cylinder(0, 0, -1, ENC_HOLE, RING_T + 2))
 
 
+def build_screen_frame():
+    """Flat piece of the screen face with the glass cut-out and the four posts,
+    to try the real screen before printing the shell. Prints face down."""
+    frame = down_box(0, PCB_U, PCB_W + 8, PCB_H + 8, 0, WALL)
+    adds, cuts = face_features()
+    inv = face_frame().inverse()
+    for a in adds:
+        frame = frame.fuse(placed(a, inv))
+    for c in cuts:
+        frame = frame.cut(placed(c, inv))
+    frame.rotate(V(0, PCB_U, 0), V(1, 0, 0), 180)
+    return frame.removeSplitter()
+
+
 # Dummy parts: what the real parts take up, to check that nothing hits the
 # shell and to show the assembly. Not for printing.
 def dummy_screen():
@@ -343,6 +357,7 @@ ring = build_ring()
 export(shell, "shell")
 export(bottom, "bottom")
 export(ring, "ring")
+export(build_screen_frame(), "screen-frame")
 print(f"outside: {W:.0f} wide, {DEPTH:.1f} deep, {HEIGHT:.1f} high")
 
 print("clearance:")
