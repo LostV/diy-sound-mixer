@@ -3,7 +3,9 @@ on a sloped deck in front, and the CrowPanel 5" screen in the face behind it.
 
 Parts (STEP + STL next to this script):
     shell        the body, open at the bottom
-    bottom       the bottom plate, with posts for the Pico
+    bottom       the bottom plate and the back wall in one L-shaped part, with
+                 posts for the Pico. Off, it opens the back, so the screen's
+                 upper screws and inserts can be reached
     ring         colour ring under a knob; print one per colour, no AMS swaps
     assembly     shell, bottom, rings and dummy parts for viewing only
 
@@ -86,11 +88,19 @@ BAR_DEPTH = BTN_BACK + 14.5 + 1.5 + 4.0  # lowest point of the test plate bar
 INSERT_HOLE = 4.9
 INSERT_DEPTH = 5.0  # insert + 1 mm
 
-# Bottom plate: sits inside the walls, flush with their lower edge
+# Bottom part: the bottom plate and the back wall in one L. The plate sits
+# inside the walls, flush with their lower edge; the back wall goes up to a
+# skirt under the shell's rounded top edge, behind tabs that hold it in line.
 PLATE_T = 4.0
 PLATE_FIT = 0.3
+BACK_T = 2.0  # back wall of the L; the screen's back parts come within 0.2 mm
+SKIRT_H = 8.0  # the shell keeps this much of the back, under the top edge
+BACK_GAP = 0.2  # between the L's back wall and the skirt
+TAB_W, TAB_T, TAB_H = 20.0, 1.6, 6.0
+TAB_X = (-88.0, 88.0)  # beside the screen, clear of the tool paths to its upper posts
 BOSS_D, BOSS_H = 9.0, 10.0
-BOSS_INSET = 3.5  # boss centre from the inner walls; the boss runs 1 mm into them
+BOSS_INSET = 3.5  # boss centre from the inner walls; the boss runs 1 mm into the side wall
+BACK_BOSS_GAP = 0.5  # the back bosses stand this far in front of the L's back wall
 BOSS_INSERT_DEPTH = 6.0
 SCREW_HOLE = 3.4
 SCREW_HEAD_D, SCREW_HEAD_SINK = 6.5, 3.0  # M3x6 socket head sits flush
@@ -102,9 +112,10 @@ PICO_X, PICO_Y = 15.0, 108.0  # centre; long side along x, USB end to the right
 PICO_POST_D, PICO_POST_H = 5.0, 5.0
 PICO_SCREW_HOLE = 1.8  # M2 screw cuts its own thread
 
-# Cable slots in the back wall, open at the bottom
+# Cable slots in the corner of the L, open below, so the cables go in from
+# underneath
 CABLE_SLOTS = (-85.0, 70.0)  # screen USB-C on the left, Pico on the right
-CABLE_W, CABLE_H = 7.0, 10.0
+CABLE_W, CABLE_H, CABLE_IN = 7.0, 10.0, 7.0  # up the back wall, into the plate
 
 # Profile corners (y, z)
 _da, _fa = math.radians(DECK_ANGLE), math.radians(FACE_ANGLE)
@@ -224,9 +235,14 @@ def inner_profile():
     return face.makeOffset2D(-WALL, join=2)
 
 
+SPLIT_Z = HEIGHT - SKIRT_H  # the L's back wall reaches up to here
+BACK_IN = DEPTH - BACK_T - PLATE_FIT  # inner face of the L's back wall
+
+
 def boss_positions():
     xi = W / 2 - SIDE_WALL - BOSS_INSET
-    return [(sx * xi, y) for sx in (-1, 1) for y in (WALL + BOSS_INSET, DEPTH - WALL - BOSS_INSET)]
+    back = BACK_IN - BACK_BOSS_GAP - BOSS_D / 2
+    return [(sx * xi, y) for sx in (-1, 1) for y in (WALL + BOSS_INSET, back)]
 
 
 def build_shell():
@@ -248,6 +264,8 @@ def build_shell():
     inner = round_long_edges(inner, inner_rounds)
     shell = outer.cut(inner)
     shell = shell.cut(box(-W / 2 + SIDE_WALL, WALL, -1, W - 2 * SIDE_WALL, DEPTH - 2 * WALL, WALL + 1.1))
+    # Open back between the side walls, up to the skirt; the L closes it.
+    shell = shell.cut(box(-W / 2 + SIDE_WALL, DEPTH - WALL - 0.1, -1, W - 2 * SIDE_WALL, WALL + 1.1, SPLIT_Z + 1))
 
     deck_adds, deck_cuts = deck_features()
     face_adds, face_cuts = face_features()
@@ -255,8 +273,12 @@ def build_shell():
     for x, y in boss_positions():
         adds.append(cylinder(x, y, PLATE_T, BOSS_D, BOSS_H))
         cuts.append(cylinder(x, y, PLATE_T - 0.1, INSERT_HOLE, BOSS_INSERT_DEPTH + 0.1))
-    for x in CABLE_SLOTS:
-        cuts.append(centered_box(x, DEPTH - WALL / 2, -1, CABLE_W, WALL + 2, CABLE_H + 1))
+    for x in TAB_X:
+        # A tongue just inside the L's back wall, hung from a web that joins
+        # the skirt and the top above the wall.
+        adds.append(centered_box(x, BACK_IN - TAB_T / 2, SPLIT_Z - TAB_H, TAB_W, TAB_T, TAB_H + 0.1))
+        web_t = DEPTH - WALL + 0.5 - (BACK_IN - TAB_T)
+        adds.append(centered_box(x, BACK_IN - TAB_T + web_t / 2, SPLIT_Z, TAB_W, web_t, SKIRT_H - WALL + 0.5))
 
     for a in adds:
         shell = shell.fuse(a)
@@ -267,7 +289,11 @@ def build_shell():
 
 def build_bottom():
     x0 = -W / 2 + SIDE_WALL + PLATE_FIT
-    plate = box(x0, WALL + PLATE_FIT, 0, -2 * x0, DEPTH - 2 * WALL - 2 * PLATE_FIT, PLATE_T)
+    plate = box(x0, WALL + PLATE_FIT, 0, -2 * x0, BACK_IN - WALL - PLATE_FIT, PLATE_T)
+    plate = plate.fuse(box(x0, BACK_IN, 0, -2 * x0, BACK_T + PLATE_FIT, SPLIT_Z - BACK_GAP))
+    for x in CABLE_SLOTS:
+        plate = plate.cut(centered_box(x, BACK_IN + (BACK_T + PLATE_FIT) / 2 - CABLE_IN / 2, -1,
+                                       CABLE_W, BACK_T + PLATE_FIT + CABLE_IN + 1, CABLE_H + 1))
     for x, y in boss_positions():
         plate = plate.cut(cylinder(x, y, -1, SCREW_HOLE, PLATE_T + 2))
         plate = plate.cut(cylinder(x, y, -1, SCREW_HEAD_D, SCREW_HEAD_SINK + 1))
@@ -364,6 +390,8 @@ export(build_screen_frame(), "screen-frame")
 print(f"outside: {W:.0f} wide, {DEPTH:.1f} deep, {HEIGHT:.1f} high")
 
 print("clearance:")
+hit = shell.common(bottom).Volume
+print(f"  bottom part: {'clear' if hit < 0.01 else f'HITS ({hit:.1f} mm3)'}")
 check(shell, bottom, "screen", dummy_screen())
 check(shell, bottom, "USB-C plug", dummy_usb_plug())
 for i, d in enumerate(dummy_encoders()):

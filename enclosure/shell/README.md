@@ -7,8 +7,8 @@ Norwegian) is [docs/skall.md](../../docs/skall.md); part measurements are in
 
 | File | Part |
 |------|------|
-| `shell.stl` / `.step` | The body, open at the bottom. Prints standing on its back. |
-| `bottom.stl` / `.step` | Bottom plate with posts for the Pico. Prints flat. |
+| `shell.stl` / `.step` | The body, open at the bottom and the back. |
+| `bottom.stl` / `.step` | The bottom plate and the back wall in one L, with posts for the Pico. Off, the open back gives a straight path to the screen's upper posts. Prints on the plate. |
 | `ring.stl` / `.step` | Colour ring under a knob. One print job per colour. |
 | `screen-frame.stl` / `.step` | Flat piece of the screen face (glass cut-out and posts) to try the screen before printing the shell. Prints face down. |
 | `assembly.step` | Everything put together, with dummy screen, knobs, encoders and Pico. For viewing only. |
