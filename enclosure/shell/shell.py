@@ -1,5 +1,5 @@
 """Final shell for the mixer: a wedge with four knobs and the mic-mute button
-on a sloped deck in front, and the CrowPanel 5" screen in the face behind it.
+on a flat deck in front, and the CrowPanel 5" screen in the face behind it.
 
 Parts (STEP + STL next to this script):
     shell        the body, open at the bottom

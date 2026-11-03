@@ -1,7 +1,7 @@
 # Shell
 
 The final enclosure: a wedge with the four knobs and the mic-mute button on a
-sloped deck, and the CrowPanel 5" screen in the face behind it. The guide (in
+flat deck, and the CrowPanel 5" screen in the sloped face behind it. The guide (in
 Norwegian) is [docs/skall.md](../../docs/skall.md); part measurements are in
 [docs/maal-deler.md](../../docs/maal-deler.md).
 
