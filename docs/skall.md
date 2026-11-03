@@ -8,8 +8,9 @@ Det ferdige kabinettet: en kile med de fire knottene og mic-knappen foran, og sk
 |-----|---|
 | Bredde | 216 mm |
 | Dybde | 131 mm |
-| Høyde bak | 90 mm |
-| Høyde foran | 30 mm |
+| Høyde bak | 88,5 mm |
+| Høyde foran | 32 mm |
+| Knott-flaten | flat, med en myk bue opp mot skjermen |
 | Skjermvinkel | 40° fra bordet |
 
 ## Delene
@@ -32,7 +33,7 @@ I mappen `enclosure/shell/`:
 *Snitt fra siden. Fronten er til høyre.*
 
 - **Skjermen** legges inn fra undersiden. Glasset går inn i hullet i skrå-flaten og ligger 0,6 mm under overflaten. Kretskortet skrus fast på fire stolper bak flaten, med M3-skruer i gjengeinnsatser.
-- **Knottene og mic-knappen** sitter akkurat som på testplaten. Lommene, hullene og stolpene er de samme, men fronten heller 4° bakover.
+- **Knottene og mic-knappen** sitter akkurat som på testplaten. Lommene, hullene og stolpene er de samme. Knott-flaten er helt flat, fordi en svak helning printes som synlige trinn, ett for hvert lag. Den går over i skjerm-flaten med en myk bue (radius 8 mm).
 - **Fargeringene** ligger i en grunn forsenkning rundt hver knott, i flukt med overflaten. Mutteren på encoderen klemmer ringen fast, så du trenger verken lim eller skruer.
 - **Pico-en** står opp ned på fire små stolper på bunnplaten, bak under skjermen. Pinnene peker da opp, så dupont-pluggene får plass.
 - **To spor i bakveggen** slipper ut kablene: USB-C fra skjermen til venstre, USB fra Pico-en til høyre. Kablene legges i sporene før bunnplaten skrus på.

@@ -32,12 +32,14 @@ OUT = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else
 W = 216.0  # wide enough for a straight USB-C plug beside the screen
 WALL = 2.0  # deck, screen face, front, top and back
 SIDE_WALL = 2.4
-FRONT_H = 30.0  # front edge height; the deck rises from here
-DECK_ANGLE, DECK_L = 4.0, 56.0
+FRONT_H = 32.0  # front edge height, and the deck's; the button bar needs it
+# The deck is flat: a few degrees of slope print as visible layer steps.
+DECK_ANGLE, DECK_L = 0.0, 56.0
 FACE_ANGLE = 40.0  # screen face, from horizontal
 TOP_L = 8.0  # flat strip behind the screen
 ROUND_FRONT, ROUND_TOP = 5.0, 4.0  # outer rounds on the long edges
 ROUND_SIDE = 2.0  # outer rounds around both side faces
+ROUND_CREASE = 8.0  # soft bend from the deck up into the screen face
 
 # Screen: Elecrow CrowPanel 5" ESP32-S3 IPS (DLE06050B). Front of the glass to
 # the front of the PCB is 5.7; the board is 137 x 84 with M3 holes 130.03 x
@@ -113,7 +115,7 @@ P_RIDGE = (P_CREASE[0] + FACE_L * math.cos(_fa), P_CREASE[1] + FACE_L * math.sin
 DEPTH = P_RIDGE[0] + TOP_L
 HEIGHT = P_RIDGE[1]
 PROFILE = [(0.0, 0.0), P_FRONT, P_CREASE, P_RIDGE, (DEPTH, HEIGHT), (DEPTH, 0.0)]
-ROUNDS = {P_FRONT: ROUND_FRONT, P_RIDGE: ROUND_TOP, (DEPTH, HEIGHT): ROUND_TOP}
+ROUNDS = {P_FRONT: ROUND_FRONT, P_CREASE: ROUND_CREASE, P_RIDGE: ROUND_TOP, (DEPTH, HEIGHT): ROUND_TOP}
 
 
 def box(x0, y0, z0, dx, dy, dz):
@@ -241,7 +243,8 @@ def build_shell():
     inner_rounds = {}
     for (y, z), r in ROUNDS.items():
         best = min(inner.Vertexes, key=lambda v: math.hypot(v.Point.y - y, v.Point.z - z))
-        inner_rounds[(best.Point.y, best.Point.z)] = max(r - WALL, 0.5)
+        # The crease bends inwards, so its inside round is the larger one.
+        inner_rounds[(best.Point.y, best.Point.z)] = r + WALL if (y, z) == P_CREASE else max(r - WALL, 0.5)
     inner = round_long_edges(inner, inner_rounds)
     shell = outer.cut(inner)
     shell = shell.cut(box(-W / 2 + SIDE_WALL, WALL, -1, W - 2 * SIDE_WALL, DEPTH - 2 * WALL, WALL + 1.1))
