@@ -7,15 +7,19 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
-static const char* FW_VERSION = "0.1.1";
+static const char* FW_VERSION = "0.2.0";
 static const int CHANNELS = 4;
 
-// Pins. GP23, GP24, GP25 and GP29 belong to the wireless chip on the W board.
-static const uint8_t ENC_A[CHANNELS] = {0, 3, 6, 9};
-static const uint8_t ENC_B[CHANNELS] = {1, 4, 7, 10};
-static const uint8_t ENC_SW[CHANNELS] = {2, 5, 8, 11};
-static const uint8_t MUTE_BTN[CHANNELS] = {12, 13, 14, 15};
-static const uint8_t MUTE_LED[CHANNELS] = {16, 17, 18, 19};
+// Pins, laid out for the shell: in it the Pico lies upside down with USB to
+// the right, so each knob gets the pins nearest to it (knob 0, far left, at
+// pin 20's end) and the 15 cm wires reach. Only channel 3 (Mic) has a mute
+// button and LED; the others' are free pins. GP23, GP24, GP25 and GP29
+// belong to the wireless chip on the W board.
+static const uint8_t ENC_A[CHANNELS] = {12, 8, 4, 0};
+static const uint8_t ENC_B[CHANNELS] = {13, 9, 5, 1};
+static const uint8_t ENC_SW[CHANNELS] = {14, 10, 6, 2};
+static const uint8_t MUTE_BTN[CHANNELS] = {3, 7, 11, 28};
+static const uint8_t MUTE_LED[CHANNELS] = {16, 17, 18, 27};
 
 // Encoder 41017819 has 24 detents and goes through a full quadrature cycle
 // (4 edges) per detent, resting with both pins high. Set HALF_STEP if one

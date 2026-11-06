@@ -6,18 +6,20 @@ The code is in `knobs.cpp`. `knobs-pico.ino` is only there because Arduino wants
 
 ## Pins
 
-| Channel | Encoder A | Encoder B | Encoder push | Mute button | Mute LED |
-|---|---|---|---|---|---|
-| 0 (Spill) | GP0 (pin 1) | GP1 (pin 2) | GP2 (pin 4) | GP12 (pin 16) | GP16 (pin 21) |
-| 1 (Media) | GP3 (pin 5) | GP4 (pin 6) | GP5 (pin 7) | GP13 (pin 17) | GP17 (pin 22) |
-| 2 (Chat) | GP6 (pin 9) | GP7 (pin 10) | GP8 (pin 11) | GP14 (pin 19) | GP18 (pin 24) |
-| 3 (Mic) | GP9 (pin 12) | GP10 (pin 14) | GP11 (pin 15) | GP15 (pin 20) | GP19 (pin 25) |
+| Channel | Encoder A | Encoder B | Encoder push | GND | Mute button | Mute LED |
+|---|---|---|---|---|---|---|
+| 0 (Spill) | GP12 (pin 16) | GP13 (pin 17) | GP14 (pin 19) | pin 18 | (GP3) | (GP16) |
+| 1 (Media) | GP8 (pin 11) | GP9 (pin 12) | GP10 (pin 14) | pin 13 | (GP7) | (GP17) |
+| 2 (Chat) | GP4 (pin 6) | GP5 (pin 7) | GP6 (pin 9) | pin 8 | (GP11) | (GP18) |
+| 3 (Mic) | GP0 (pin 1) | GP1 (pin 2) | GP2 (pin 4) | pin 3 | GP28 (pin 34) | GP27 (pin 32) |
+
+The pins follow the shell: the Pico lies upside down with USB to the right, so pin 1 to 20 face the knobs and each knob gets the pins nearest to it. Only the mic has a mute button (GND on pin 38); the pins in brackets are set up but not wired. Firmware 0.1.x used the breadboard layout of test 1 instead (knob 0 on GP0–GP2).
 
 - Encoder common pin (C, the middle one), the second push pin and the second button pin go to GND. The inputs use the internal pull-ups, so nothing goes to 3V3.
 - Each LED goes GPIO → 220 Ω → LED → GND.
 - GP23, GP24, GP25 and GP29 belong to the wireless chip and are not used.
 
-Wiring for one channel: [schematic](../../docs/koblingsskjema-knotter.svg) and [breadboard layout](../../docs/breadboard-knotter.svg). Step-by-step guide (Norwegian): [docs/test-1-knotter.md](../../docs/test-1-knotter.md).
+Soldering guide for the shell (Norwegian): [docs/lodding.md](../../docs/lodding.md). The breadboard guide [docs/test-1-knotter.md](../../docs/test-1-knotter.md) uses the old pins.
 
 ## Settings
 
